@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+equipo3WebServer-key.pub
+cloud-init.yml
+equipo3WebServer-key
