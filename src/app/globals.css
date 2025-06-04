@@ -120,3 +120,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .cursor-col-resize {
+    cursor: col-resize !important;
+  }
+  .cursor-row-resize {
+    cursor: row-resize !important;
+  }
+  .select-none-body {
+    user-select: none !important;
+  }
+}

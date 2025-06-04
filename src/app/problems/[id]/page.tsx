@@ -153,20 +153,18 @@ You can return the answer in any order.`,
     if (isResizing || isResizingVertical) {
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = isResizing ? 'col-resize' : 'row-resize'
-      document.body.style.userSelect = 'none'
+      document.body.classList.add(isResizing ? 'cursor-col-resize' : 'cursor-row-resize')
+      document.body.classList.add('select-none-body')
     } else {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
+      document.body.classList.remove('cursor-col-resize', 'cursor-row-resize', 'select-none-body')
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
+      document.body.classList.remove('cursor-col-resize', 'cursor-row-resize', 'select-none-body')
     }
   }, [isResizing, isResizingVertical, handleMouseMove, handleMouseUp])
 
