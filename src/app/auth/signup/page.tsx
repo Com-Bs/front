@@ -50,27 +50,22 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Logo size="lg" className="justify-center mb-4" />
-          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">Join Compilo! 🎉</h1>
-          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">Start your coding adventure today</p>
+          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">Join Compilo!</h1>
+          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">Fill in your details to get started to start your coding adventure</p>
         </div>
 
         <Card className="bg-white/80 dark:bg-[#2A2B3D]/80 backdrop-blur-sm border-[#DDBDD5]/30">
-          <CardHeader>
-            <CardTitle className="text-[#1D1E2C] dark:text-white">Create Account</CardTitle>
-            <CardDescription className="text-[#59656F] dark:text-[#DDBDD5]">
-              Fill in your details to get started
-            </CardDescription>
-          </CardHeader>
+        
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-[#1D1E2C] dark:text-white">
-                  Full Name
+                  Username
                 </Label>
                 <Input
                   id="name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Username"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   className="border-[#DDBDD5]/50 focus:border-[#AC9FBB]"
@@ -85,7 +80,7 @@ export default function SignupPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="john@example.com"
+                  placeholder="example@email.com"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   className="border-[#DDBDD5]/50 focus:border-[#AC9FBB]"
