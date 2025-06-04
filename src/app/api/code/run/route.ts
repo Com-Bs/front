@@ -1,34 +1,47 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+const API_BASE_URL = process.env.BACKEND_API_URL || 'https://localhost:8443'
+
 export async function POST(request: NextRequest) {
   try {
-    await request.json() // Extract parameters when needed
+    const body = await request.json()
+    
+    // Get auth token from request headers
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
+    }
 
-    // Mock code execution
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    // Mock test results
-    const mockResults = [
-      { testCaseId: 1, status: "passed", output: "[0,1]", executionTime: "2ms" },
-      { testCaseId: 2, status: "passed", output: "[1,2]", executionTime: "1ms" },
-      {
-        testCaseId: 3,
-        status: Math.random() > 0.5 ? "passed" : "failed",
-        output: Math.random() > 0.5 ? "[0,1]" : "null",
-        executionTime: "3ms",
+    // Proxy to Go backend
+    const backendResponse = await fetch(`${API_BASE_URL}/compile`, {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
       },
-    ]
+      body: JSON.stringify(body)
+    })
 
-    const allPassed = mockResults.every((result) => result.status === "passed")
+    const data = await backendResponse.json()
 
+    if (!backendResponse.ok) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Code execution failed" 
+      }, { status: backendResponse.status })
+    }
+
+    // Transform response to match frontend expectations
     return NextResponse.json({
       success: true,
-      results: mockResults,
-      allTestsPassed: allPassed,
-      totalExecutionTime: "6ms",
-      memoryUsage: "14.2 MB",
+      results: data.results || [],
+      allTestsPassed: data.allTestsPassed || false,
+      totalExecutionTime: data.totalExecutionTime || "0ms",
+      memoryUsage: data.memoryUsage || "0 MB",
     })
-  } catch {
+  } catch (error) {
+    console.error('Code execution error:', error)
     return NextResponse.json({ success: false, message: "Code execution failed" }, { status: 500 })
   }
 }

@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
+import { useAuth } from "@/components/auth-provider"
 
 interface NavbarProps {
   variant?: "default" | "landing"
@@ -16,13 +17,14 @@ export function Navbar({ variant = "default" }: NavbarProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const { logout } = useAuth()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   const handleLogout = () => {
-    localStorage.clear()
+    logout()
     router.push("/")
   }
 

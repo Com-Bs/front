@@ -1,0 +1,199 @@
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
+
+// Event listener for logout
+type LogoutListener = () => void
+let logoutListeners: LogoutListener[] = []
+
+class ApiClient {
+  private baseUrl: string
+  private token: string | null = null
+
+  constructor(baseUrl: string = API_BASE_URL) {
+    this.baseUrl = baseUrl
+    this.token = this.getStoredToken()
+  }
+
+  private getStoredToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth_token')
+    }
+    return null
+  }
+
+  private setStoredToken(token: string): void {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_token', token)
+      this.token = token
+    }
+  }
+
+  private removeStoredToken(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token')
+      this.token = null
+    }
+  }
+
+  private handleUnauthorized(isLoginAttempt: boolean = false): void {
+    this.removeStoredToken()
+    // Notify all listeners about logout
+    logoutListeners.forEach(listener => listener())
+    
+    // Only redirect if this isn't a login attempt and we're on the client side
+    if (!isLoginAttempt && typeof window !== 'undefined' && !window.location.pathname.includes('/auth/')) {
+      window.location.href = '/auth/login'
+    }
+  }
+
+  addLogoutListener(listener: LogoutListener): void {
+    logoutListeners.push(listener)
+  }
+
+  removeLogoutListener(listener: LogoutListener): void {
+    logoutListeners = logoutListeners.filter(l => l !== listener)
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    isLoginAttempt: boolean = false
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    }
+
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
+    }
+
+    const config: RequestInit = {
+      ...options,
+      headers,
+    }
+
+    const response = await fetch(url, config)
+    
+    // Handle unauthorized responses
+    if (response.status === 401) {
+      this.handleUnauthorized(isLoginAttempt)
+      throw new Error('Unauthorized - please log in again')
+    }
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      let errorMessage = `HTTP error! status: ${response.status}`
+      
+      try {
+        const errorData = JSON.parse(errorText)
+        errorMessage = errorData.message || errorMessage
+      } catch {
+        // If response is not JSON, use default message
+      }
+      
+      throw new Error(errorMessage)
+    }
+
+    return response.json()
+  }
+
+  // Auth endpoints
+  async login(email: string, password: string) {
+    const response = await this.request<{ 
+      success: boolean
+      token: string
+      user: { id: number; email: string; name: string }
+      message?: string
+    }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }, true) // Mark this as a login attempt
+    
+    if (response.success && response.token) {
+      this.setStoredToken(response.token)
+    }
+    
+    return response
+  }
+
+  async signup(username: string, email: string, password: string) {
+    return this.request<{ 
+      success: boolean
+      user: { username: string; email: string }
+      message: string 
+    }>('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ username, email, password }),
+    })
+  }
+
+  logout() {
+    this.removeStoredToken()
+    // Notify listeners about manual logout
+    logoutListeners.forEach(listener => listener())
+  }
+
+  // Problem endpoints
+  async getProblems() {
+    return this.request<{
+      success: boolean
+      problems: Array<{
+        id: string
+        title: string
+        difficulty: string
+        description: string
+        hints: string[]
+        test_cases: Array<{ input: string; output: string }>
+        created_at: string
+        updated_at: string
+      }>
+    }>('/problems', {
+      method: 'GET',
+    })
+  }
+
+  async getProblem(id: string) {
+    return this.request<{
+      success: boolean
+      problem: {
+        id: string
+        title: string
+        difficulty: string
+        description: string
+        hints: string[]
+        test_cases: Array<{ input: string; output: string }>
+        created_at: string
+        updated_at: string
+      }
+    }>(`/problems/${id}`, {
+      method: 'GET',
+    })
+  }
+
+  // Code execution endpoint
+  async runCode(code: string, language: string, problemId?: string) {
+    return this.request<{
+      success: boolean
+      results: Array<{
+        testCaseId: number
+        status: string
+        output: string
+        executionTime: string
+      }>
+      allTestsPassed: boolean
+      totalExecutionTime: string
+      memoryUsage: string
+    }>('/code/run', {
+      method: 'POST',
+      body: JSON.stringify({ code, language, problemId }),
+    })
+  }
+
+  isAuthenticated(): boolean {
+    return this.token !== null
+  }
+}
+
+export const apiClient = new ApiClient()
+export default apiClient

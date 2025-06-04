@@ -14,9 +14,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { apiClient } from "@/lib/api"
 
 interface Problem {
-  id: number
+  id: string // MongoDB ObjectID
+  displayId: number // Sequential number for display
   title: string
   difficulty: "Easy" | "Medium" | "Hard"
   tags: string[]
@@ -31,96 +33,36 @@ export default function ProblemsPage() {
   const [difficultyFilter, setDifficultyFilter] = useState<string[]>([])
   const [sortBy, setSortBy] = useState("id")
 
-  // Mock API call to fetch problems
+  // Fetch problems from API
   useEffect(() => {
     const fetchProblems = async () => {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 800))
-
-      const mockProblems: Problem[] = [
-        {
-          id: 1,
-          title: "Two Sum",
-          difficulty: "Easy",
-          tags: ["Array", "Hash Table"],
-          solvedCount: 4582,
-          acceptanceRate: "72%",
-        },
-        {
-          id: 2,
-          title: "Add Two Numbers",
-          difficulty: "Medium",
-          tags: ["Linked List", "Math", "Recursion"],
-          solvedCount: 2341,
-          acceptanceRate: "65%",
-        },
-        {
-          id: 3,
-          title: "Longest Substring Without Repeating Characters",
-          difficulty: "Medium",
-          tags: ["Hash Table", "String", "Sliding Window"],
-          solvedCount: 1987,
-          acceptanceRate: "58%",
-        },
-        {
-          id: 4,
-          title: "Median of Two Sorted Arrays",
-          difficulty: "Hard",
-          tags: ["Array", "Binary Search", "Divide and Conquer"],
-          solvedCount: 876,
-          acceptanceRate: "42%",
-        },
-        {
-          id: 5,
-          title: "Longest Palindromic Substring",
-          difficulty: "Medium",
-          tags: ["String", "Dynamic Programming"],
-          solvedCount: 1654,
-          acceptanceRate: "61%",
-        },
-        {
-          id: 6,
-          title: "ZigZag Conversion",
-          difficulty: "Medium",
-          tags: ["String"],
-          solvedCount: 1123,
-          acceptanceRate: "54%",
-        },
-        {
-          id: 7,
-          title: "Reverse Integer",
-          difficulty: "Medium",
-          tags: ["Math"],
-          solvedCount: 2876,
-          acceptanceRate: "68%",
-        },
-        {
-          id: 8,
-          title: "String to Integer (atoi)",
-          difficulty: "Medium",
-          tags: ["String", "Math"],
-          solvedCount: 1432,
-          acceptanceRate: "49%",
-        },
-        {
-          id: 9,
-          title: "Palindrome Number",
-          difficulty: "Easy",
-          tags: ["Math"],
-          solvedCount: 3654,
-          acceptanceRate: "81%",
-        },
-        {
-          id: 10,
-          title: "Regular Expression Matching",
-          difficulty: "Hard",
-          tags: ["String", "Dynamic Programming", "Recursion"],
-          solvedCount: 543,
-          acceptanceRate: "32%",
-        },
-      ]
-
-      setProblems(mockProblems)
+      try {
+        const data = await apiClient.getProblems()
+        
+        if (data.success && data.problems) {
+          // Transform backend data to match frontend interface
+          const transformedProblems: Problem[] = data.problems.map((problem: {
+            id: string
+            title: string
+            difficulty: string
+          }, index: number) => ({
+            id: problem.id, // Keep MongoDB ObjectID for API calls
+            displayId: index + 1, // Sequential number for display
+            title: problem.title || "Untitled Problem",
+            difficulty: (problem.difficulty as "Easy" | "Medium" | "Hard") || "Easy",
+            tags: [], // Backend doesn't have tags yet, set empty array
+            solvedCount: 0, // Backend doesn't have solved count yet
+            acceptanceRate: "0%", // Backend doesn't have acceptance rate yet
+          }))
+          
+          setProblems(transformedProblems)
+        }
+      } catch (error) {
+        console.error('Failed to fetch problems:', error)
+        // No fallback - let user see the error
+        setProblems([])
+      }
+      
       setIsLoading(false)
     }
 
@@ -155,7 +97,7 @@ export default function ProblemsPage() {
         case "solved":
           return b.solvedCount - a.solvedCount
         default:
-          return a.id - b.id
+          return a.displayId - b.displayId
       }
     })
 
@@ -252,7 +194,7 @@ export default function ProblemsPage() {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="id">Problem ID</SelectItem>
+                <SelectItem value="id">Problem Number</SelectItem>
                 <SelectItem value="title">Problem Title</SelectItem>
                 <SelectItem value="difficulty">Difficulty</SelectItem>
                 <SelectItem value="acceptance">Acceptance Rate</SelectItem>
@@ -289,7 +231,7 @@ export default function ProblemsPage() {
                 filteredProblems.map((problem) => (
                   <Link key={problem.id} href={`/problems/${problem.id}`}>
                     <div className="grid grid-cols-12 px-6 py-4 hover:bg-[#F7EBEC] dark:hover:bg-[#1D1E2C] cursor-pointer transition-colors">
-                      <div className="col-span-1 font-medium text-[#1D1E2C] dark:text-white">{problem.id}</div>
+                      <div className="col-span-1 font-medium text-[#1D1E2C] dark:text-white">{problem.displayId}</div>
                       <div className="col-span-5">
                         <div className="font-medium text-[#1D1E2C] dark:text-white">{problem.title}</div>
                         <div className="mt-1 flex flex-wrap gap-1">
@@ -323,7 +265,7 @@ export default function ProblemsPage() {
       <footer className="bg-white dark:bg-[#2A2B3D] border-t border-[#DDBDD5]/30 px-4 py-4 mt-auto">
         <div className="container mx-auto flex items-center justify-between">
           <p className="text-sm text-[#59656F] dark:text-[#DDBDD5]">
-            © 2024 Compilo. Made with 💜 for aspiring developers.
+          © 2025 Compilo by ComπBs.
           </p>
           <div className="text-sm text-[#59656F] dark:text-[#DDBDD5]">{filteredProblems.length} problems available</div>
         </div>

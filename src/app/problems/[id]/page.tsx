@@ -8,6 +8,7 @@ import { Play, ChevronRight, CheckCircle, XCircle, Clock, ArrowLeft } from "luci
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import Link from "next/link"
 import { useParams } from "next/navigation"
+import { apiClient } from "@/lib/api"
 
 interface TestCase {
   id: number
@@ -17,7 +18,7 @@ interface TestCase {
 }
 
 interface Problem {
-  id: number
+  id: string // Changed from number to string for MongoDB ObjectID
   title: string
   difficulty: "Easy" | "Medium" | "Hard"
   description: string
@@ -56,55 +57,36 @@ export default function ProblemPage() {
       if (!problemId) return
       
       try {
-        const response = await fetch(`/api/problems/${problemId}`)
-        const data = await response.json()
+        const data = await apiClient.getProblem(problemId)
         
         if (data.success && data.problem) {
-          setCurrentProblem(data.problem)
-          // Set starter code if available
-          if (data.problem.starterCode?.javascript) {
-            setCode(data.problem.starterCode.javascript)
-          } else {
-            setCode(`function solution() {
+          const transformedProblem: Problem = {
+            id: data.problem.id, // Keep as string for MongoDB ObjectID
+            title: data.problem.title,
+            difficulty: data.problem.difficulty as "Easy" | "Medium" | "Hard",
+            description: data.problem.description,
+            testCases: data.problem.test_cases.map((tc: { input: string; output: string }, index: number) => ({
+              id: index + 1,
+              input: tc.input,
+              expectedOutput: tc.output,
+              status: "pending"
+            })),
+            examples: data.problem.test_cases.slice(0, 2).map((tc: { input: string; output: string }) => ({
+              input: tc.input,
+              output: tc.output
+            }))
+          }
+          setCurrentProblem(transformedProblem)
+          // Set default code
+          setCode(`function solution() {
     // Write your solution here
     
 }`)
-          }
         }
       } catch (error) {
         console.error('Failed to fetch problem:', error)
-        // Fallback to mock data if API fails
-        const mockProblem: Problem = {
-          id: Number.parseInt(problemId),
-          title: "Two Sum",
-          difficulty: "Easy",
-          description: `Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
-
-You may assume that each input would have exactly one solution, and you may not use the same element twice.
-
-You can return the answer in any order.`,
-          examples: [
-            {
-              input: "nums = [2,7,11,15], target = 9",
-              output: "[0,1]",
-              explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-            },
-            {
-              input: "nums = [3,2,4], target = 6",
-              output: "[1,2]",
-            },
-          ],
-          testCases: [
-            { id: 1, input: "[2,7,11,15], 9", expectedOutput: "[0,1]", status: "pending" },
-            { id: 2, input: "[3,2,4], 6", expectedOutput: "[1,2]", status: "pending" },
-            { id: 3, input: "[3,3], 6", expectedOutput: "[0,1]", status: "pending" },
-          ],
-        }
-        setCurrentProblem(mockProblem)
-        setCode(`function twoSum(nums, target) {
-    // Write your solution here
-    
-}`)
+        // No fallback - let the user see the error
+        setCurrentProblem(null)
       }
     }
 
@@ -172,25 +154,13 @@ You can return the answer in any order.`,
     setIsRunning(true)
 
     try {
-      const response = await fetch('/api/code/run', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code,
-          language: 'javascript',
-          testCases: currentProblem?.testCases || []
-        }),
-      })
-      
-      const data = await response.json()
+      const data = await apiClient.runCode(code, 'javascript', problemId)
       
       if (data.success && currentProblem) {
         // Update test cases with results
         const updatedTestCases = currentProblem.testCases.map((testCase, index) => ({
           ...testCase,
-          status: data.results?.[index]?.passed ? "passed" : "failed" as "passed" | "failed",
+          status: data.results?.[index]?.status === "passed" ? "passed" : "failed" as "passed" | "failed",
         }))
 
         setCurrentProblem({
@@ -200,18 +170,7 @@ You can return the answer in any order.`,
       }
     } catch (error) {
       console.error('Failed to run code:', error)
-      // Fallback to mock results
-      if (currentProblem) {
-        const updatedTestCases = currentProblem.testCases.map((testCase) => ({
-          ...testCase,
-          status: Math.random() > 0.3 ? "passed" : ("failed" as "passed" | "failed"),
-        }))
-
-        setCurrentProblem({
-          ...currentProblem,
-          testCases: updatedTestCases,
-        })
-      }
+      // No fallback - show actual error to user
     }
 
     setIsRunning(false)
@@ -243,7 +202,9 @@ You can return the answer in any order.`,
               <span>Problems</span>
             </Button>
           </Link>
-          <span className="text-sm text-[#59656F] dark:text-[#DDBDD5]">Problem {problemId}</span>
+          <span className="text-sm text-[#59656F] dark:text-[#DDBDD5]">
+            {currentProblem ? currentProblem.title : "Problem"}
+          </span>
         </div>
       </div>
 
@@ -295,6 +256,9 @@ You can return the answer in any order.`,
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#AC9FBB] mx-auto mb-4"></div>
                   <p className="text-[#59656F] dark:text-[#DDBDD5]">Loading problem...</p>
+                  <p className="text-sm text-[#59656F] dark:text-[#DDBDD5] mt-2">
+                    If this takes too long, the problem might not exist or there's a backend issue.
+                  </p>
                 </div>
               </div>
             )}
