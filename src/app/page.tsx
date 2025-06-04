@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { Navbar } from "@/components/navbar"
 import { Logo } from "@/components/logo"
 import { Code, Zap, Users } from "lucide-react"
 import Link from "next/link"
@@ -6,24 +7,7 @@ import Link from "next/link"
 export default function LandingPage() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-[#F7EBEC] via-white to-[#DDBDD5] dark:from-[#1D1E2C] dark:via-[#2A2B3D] dark:to-[#59656F]">
-      {/* Header */}
-      <header className="container mx-auto px-4 py-6">
-        <nav className="flex items-center justify-between">
-          <Logo size="lg" />
-          <div className="flex items-center gap-4">
-            <Link href="/auth/login">
-              <Button variant="ghost" className="text-[#59656F] dark:text-[#DDBDD5]">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/auth/signup">
-              <Button className="bg-gradient-to-r from-[#AC9FBB] to-[#59656F] hover:from-[#DDBDD5] hover:to-[#AC9FBB] text-white">
-                Get Started
-              </Button>
-            </Link>
-          </div>
-        </nav>
-      </header>
+      <Navbar variant="landing" />
 
       {/* Hero Section */}
       <main className="container mx-auto px-4 py-20">

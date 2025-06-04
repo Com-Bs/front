@@ -11,25 +11,27 @@ import { Logo } from "@/components/logo"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Mock authentication
-    if (email === "hello" && password === "hello123") {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      await login(email, password)
       router.push("/app")
-    } else {
-      alert("Invalid credentials! Use hello / hello123")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed")
     }
 
     setIsLoading(false)
@@ -48,6 +50,11 @@ export default function LoginPage() {
       
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-[#1D1E2C] dark:text-white">
                   Email

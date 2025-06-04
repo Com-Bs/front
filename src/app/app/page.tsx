@@ -1,167 +1,105 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Logo } from "@/components/logo"
-import { Play, ChevronRight, LogOut, CheckCircle, XCircle, Clock } from "lucide-react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Navbar } from "@/components/navbar"
+import { Search, Filter, ArrowUpDown } from "lucide-react"
 import Link from "next/link"
-interface TestCase {
-  id: number
-  input: string
-  expectedOutput: string
-  status: "pending" | "passed" | "failed"
-}
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { apiClient } from "@/lib/api"
 
 interface Problem {
-  id: number
+  id: string // MongoDB ObjectID
+  displayId: number // Sequential number for display
   title: string
   difficulty: "Easy" | "Medium" | "Hard"
-  description: string
-  examples: Array<{
-    input: string
-    output: string
-    explanation?: string
-  }>
-  testCases: TestCase[]
+  tags: string[]
+  solvedCount: number
+  acceptanceRate: string
 }
 
+export default function ProblemsPage() {
+  const [problems, setProblems] = useState<Problem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [difficultyFilter, setDifficultyFilter] = useState<string[]>([])
+  const [sortBy, setSortBy] = useState("id")
 
-
-export default function AppPage() {
-  const [isTestPanelOpen, setIsTestPanelOpen] = useState(true)
-  const [currentProblem, setCurrentProblem] = useState<Problem | null>(null)
-  const [code, setCode] = useState("")
-  const [isRunning, setIsRunning] = useState(false)
-  const [leftWidth, setLeftWidth] = useState(50) // percentage
-  const [isResizing, setIsResizing] = useState(false)
-  const [outputHeight, setOutputHeight] = useState(30) // percentage of right panel
-  const [isResizingVertical, setIsResizingVertical] = useState(false)
-  
-  const containerRef = useRef<HTMLDivElement>(null)
-  const rightPanelRef = useRef<HTMLDivElement>(null)
-
-  // Mock API call to fetch problem
+  // Fetch problems from API
   useEffect(() => {
-    const fetchProblem = async () => {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+    const fetchProblems = async () => {
+      try {
+        const data = await apiClient.getProblems()
+        
+        if (data.success && data.problems) {
+          // Transform backend data to match frontend interface
+          const transformedProblems: Problem[] = data.problems.map((problem: {
+            id: string
+            title: string
+            difficulty: string
+          }, index: number) => ({
+            id: problem.id, // Keep MongoDB ObjectID for API calls
+            displayId: index + 1, // Sequential number for display
+            title: problem.title || "Untitled Problem",
+            difficulty: (problem.difficulty as "Easy" | "Medium" | "Hard") || "Easy",
+            tags: [], // Backend doesn't have tags yet, set empty array
+            solvedCount: 0, // Backend doesn't have solved count yet
+            acceptanceRate: "0%", // Backend doesn't have acceptance rate yet
+          }))
+          
+          setProblems(transformedProblems)
+        }
+      } catch (error) {
+        console.error('Failed to fetch problems:', error)
+        // No fallback - let user see the error
+        setProblems([])
+      }
+      
+      setIsLoading(false)
+    }
 
-      const mockProblem: Problem = {
-        id: 1,
-        title: "Two Sum",
-        difficulty: "Easy",
-        description: `Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
+    fetchProblems()
+  }, [])
 
-You may assume that each input would have exactly one solution, and you may not use the same element twice.
-
-You can return the answer in any order.`,
-        examples: [
-          {
-            input: "nums = [2,7,11,15], target = 9",
-            output: "[0,1]",
-            explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-          },
-          {
-            input: "nums = [3,2,4], target = 6",
-            output: "[1,2]",
-          },
-        ],
-        testCases: [
-          { id: 1, input: "[2,7,11,15], 9", expectedOutput: "[0,1]", status: "pending" },
-          { id: 2, input: "[3,2,4], 6", expectedOutput: "[1,2]", status: "pending" },
-          { id: 3, input: "[3,3], 6", expectedOutput: "[0,1]", status: "pending" },
-        ],
+  // Filter and sort problems
+  const filteredProblems = problems
+    .filter((problem) => {
+      // Apply search filter
+      if (searchQuery && !problem.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false
       }
 
-      setCurrentProblem(mockProblem)
-      setCode(`/* Write your solution here */`)
-    }
+      // Apply difficulty filter
+      if (difficultyFilter.length > 0 && !difficultyFilter.includes(problem.difficulty)) {
+        return false
+      }
 
-    fetchProblem()
-  }, [])
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsResizing(true)
-  }, [])
-
-  const handleVerticalMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsResizingVertical(true)
-  }, [])
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isResizing && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect()
-      const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100
-      
-      // Constrain between 20% and 80%
-      const constrainedWidth = Math.min(Math.max(newLeftWidth, 20), 80)
-      setLeftWidth(constrainedWidth)
-    }
-    
-    if (isResizingVertical && rightPanelRef.current) {
-      const rightPanelRect = rightPanelRef.current.getBoundingClientRect()
-      const headerHeight = 57 // Approximate header height
-      const availableHeight = rightPanelRect.height - headerHeight
-      const relativeY = e.clientY - rightPanelRect.top - headerHeight
-      const newOutputHeight = ((availableHeight - relativeY) / availableHeight) * 100
-      
-      // Constrain between 15% and 70%
-      const constrainedHeight = Math.min(Math.max(newOutputHeight, 15), 70)
-      setOutputHeight(constrainedHeight)
-    }
-  }, [isResizing, isResizingVertical])
-
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(false)
-    setIsResizingVertical(false)
-  }, [])
-
-  useEffect(() => {
-    if (isResizing || isResizingVertical) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = isResizing ? 'col-resize' : 'row-resize'
-      document.body.style.userSelect = 'none'
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-  }, [isResizing, isResizingVertical, handleMouseMove, handleMouseUp])
-
-  const handleRunCode = async () => {
-    setIsRunning(true)
-
-    // Mock API call to run code
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    // Mock test results
-    if (currentProblem) {
-      const updatedTestCases = currentProblem.testCases.map((testCase) => ({
-        ...testCase,
-        status: Math.random() > 0.3 ? "passed" : ("failed" as "passed" | "failed"),
-      }))
-
-      setCurrentProblem({
-        ...currentProblem,
-        testCases: updatedTestCases,
-      })
-    }
-
-    setIsRunning(false)
-  }
+      return true
+    })
+    .sort((a, b) => {
+      // Apply sorting
+      switch (sortBy) {
+        case "title":
+          return a.title.localeCompare(b.title)
+        case "difficulty":
+          const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 }
+          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]
+        case "acceptance":
+          return Number.parseInt(a.acceptanceRate) - Number.parseInt(b.acceptanceRate)
+        case "solved":
+          return b.solvedCount - a.solvedCount
+        default:
+          return a.displayId - b.displayId
+      }
+    })
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -176,184 +114,162 @@ You can return the answer in any order.`,
     }
   }
 
+  const toggleDifficultyFilter = (difficulty: string) => {
+    if (difficultyFilter.includes(difficulty)) {
+      setDifficultyFilter(difficultyFilter.filter((d) => d !== difficulty))
+    } else {
+      setDifficultyFilter([...difficultyFilter, difficulty])
+    }
+  }
+
   return (
-    <div className="h-screen bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col">
-      {/* Header */}
-      <header className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-              <Link href="/">
-                <Logo size="sm" />
-              </Link>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/">
-                <LogOut className="w-4 h-4" />
-              </Link>
-            </Button>           
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col">
+      <Navbar />
 
-      <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-        {/* Left Panel - Problem Description & Test Cases */}
-        <div 
-          className="flex flex-col border-r border-[#DDBDD5]/30"
-          style={{ width: `${leftWidth}%` }}
-        >
-          {/* Problem Description */}
-          <div className="flex-1 overflow-auto p-6 bg-white dark:bg-[#2A2B3D]">
-            {currentProblem ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">{currentProblem.title}</h1>
-                  <Badge className={getDifficultyColor(currentProblem.difficulty)}>{currentProblem.difficulty}</Badge>
-                </div>
-
-                <div className="prose dark:prose-invert max-w-none">
-                  <p className="text-[#59656F] dark:text-[#DDBDD5] leading-relaxed">{currentProblem.description}</p>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-[#1D1E2C] dark:text-white">Examples</h3>
-                  {currentProblem.examples.map((example, index) => (
-                    <div key={index} className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded-lg p-4">
-                      <div className="space-y-2">
-                        <div>
-                          <span className="font-medium text-[#1D1E2C] dark:text-white">Input: </span>
-                          <code className="text-[#AC9FBB]">{example.input}</code>
-                        </div>
-                        <div>
-                          <span className="font-medium text-[#1D1E2C] dark:text-white">Output: </span>
-                          <code className="text-[#AC9FBB]">{example.output}</code>
-                        </div>
-                        {example.explanation && (
-                          <div>
-                            <span className="font-medium text-[#1D1E2C] dark:text-white">Explanation: </span>
-                            <span className="text-[#59656F] dark:text-[#DDBDD5]">{example.explanation}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#AC9FBB] mx-auto mb-4"></div>
-                  <p className="text-[#59656F] dark:text-[#DDBDD5]">Loading problem...</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Test Cases Panel */}
-          <Collapsible open={isTestPanelOpen} onOpenChange={setIsTestPanelOpen}>
-            <CollapsibleTrigger asChild>
-              <div className="bg-[#DDBDD5]/20 dark:bg-[#59656F]/20 border-t border-[#DDBDD5]/30 p-3 cursor-pointer hover:bg-[#DDBDD5]/30 dark:hover:bg-[#59656F]/30">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-[#1D1E2C] dark:text-white">Test Cases</h3>
-                  <ChevronRight className={`w-4 h-4 transition-transform ${isTestPanelOpen ? "rotate-90" : ""}`} />
-                </div>
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="bg-white dark:bg-[#2A2B3D] p-4 max-h-48 overflow-auto">
-                {currentProblem?.testCases.map((testCase) => (
-                  <div
-                    key={testCase.id}
-                    className="flex items-center gap-3 py-2 border-b border-[#DDBDD5]/20 last:border-b-0"
-                  >
-                    <div className="flex-shrink-0">
-                      {testCase.status === "pending" && <Clock className="w-4 h-4 text-[#59656F]" />}
-                      {testCase.status === "passed" && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      {testCase.status === "failed" && <XCircle className="w-4 h-4 text-red-500" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-[#1D1E2C] dark:text-white">Test Case {testCase.id}</div>
-                      <div className="text-xs text-[#59656F] dark:text-[#DDBDD5] truncate">Input: {testCase.input}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-[#1D1E2C] dark:text-white mb-2">Problems</h1>
+          <p className="text-[#59656F] dark:text-[#DDBDD5]">
+            Choose a problem to solve and improve your coding skills! 🚀
+          </p>
         </div>
 
-        {/* Resizable Divider */}
-        <div 
-          className="w-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-col-resize transition-colors duration-150 flex items-center justify-center group"
-          onMouseDown={handleMouseDown}
-        >
-          <div className="w-0.5 h-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
-        </div>
-
-        {/* Right Panel - Code Editor */}
-        <div 
-          className="flex flex-col"
-          style={{ width: `${100 - leftWidth}%` }}
-          ref={rightPanelRef}
-        >
-          {/* Editor Header */}
-          <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">C-</span>
-              </div>
-              <Button
-                onClick={handleRunCode}
-                disabled={isRunning}
-                className="bg-gradient-to-r from-[#AC9FBB] to-[#59656F] hover:from-[#DDBDD5] hover:to-[#AC9FBB] text-white"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                {isRunning ? "Running..." : "Run Code"}
-              </Button>
-            </div>
-          </div>
-
-          {/* Code Editor */}
-          <div 
-            className="bg-[#1D1E2C] p-4"
-            style={{ height: `${100 - outputHeight}%` }}
-          >
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full bg-transparent text-white font-mono text-sm resize-none outline-none"
-              placeholder="/* Write your solution here */"
-              style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
+        {/* Filters and Search */}
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#59656F] dark:text-[#DDBDD5] h-4 w-4" />
+            <Input
+              placeholder="Search problems..."
+              className="pl-10 border-[#DDBDD5]/50 focus:border-[#AC9FBB]"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Horizontal Resizable Divider */}
-          <div 
-            className="h-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-row-resize transition-colors duration-150 flex items-center justify-center group"
-            onMouseDown={handleVerticalMouseDown}
-          >
-            <div className="h-0.5 w-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
-          </div>
+          <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="border-[#DDBDD5]/50">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Difficulty
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuCheckboxItem
+                  checked={difficultyFilter.includes("Easy")}
+                  onCheckedChange={() => toggleDifficultyFilter("Easy")}
+                >
+                  <span className="flex items-center">
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 mr-2">
+                      Easy
+                    </Badge>
+                  </span>
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={difficultyFilter.includes("Medium")}
+                  onCheckedChange={() => toggleDifficultyFilter("Medium")}
+                >
+                  <span className="flex items-center">
+                    <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 mr-2">
+                      Medium
+                    </Badge>
+                  </span>
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={difficultyFilter.includes("Hard")}
+                  onCheckedChange={() => toggleDifficultyFilter("Hard")}
+                >
+                  <span className="flex items-center">
+                    <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 mr-2">Hard</Badge>
+                  </span>
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          {/* Output Panel */}
-          <div 
-            className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col"
-            style={{ height: `${outputHeight}%` }}
-          >
-            <h4 className="font-medium text-[#1D1E2C] dark:text-white mb-2">Output</h4>
-            <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded p-3 flex-1 overflow-auto">
-              {isRunning ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#AC9FBB]"></div>
-                  <span className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Running tests...</span>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px] border-[#DDBDD5]/50">
+                <div className="flex items-center">
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Sort by" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="id">Problem Number</SelectItem>
+                <SelectItem value="title">Problem Title</SelectItem>
+                <SelectItem value="difficulty">Difficulty</SelectItem>
+                <SelectItem value="acceptance">Acceptance Rate</SelectItem>
+                <SelectItem value="solved">Most Solved</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Problems Table */}
+        <div className="bg-white dark:bg-[#2A2B3D] rounded-lg shadow overflow-hidden">
+          <div className="min-w-full divide-y divide-[#DDBDD5]/30">
+            <div className="bg-[#DDBDD5]/20 dark:bg-[#59656F]/20">
+              <div className="grid grid-cols-12 px-6 py-3 text-left text-xs font-medium text-[#59656F] dark:text-[#DDBDD5] uppercase tracking-wider">
+                <div className="col-span-1">#</div>
+                <div className="col-span-5">Title</div>
+                <div className="col-span-2">Difficulty</div>
+                <div className="col-span-2">Acceptance</div>
+                <div className="col-span-2">Solved By</div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-[#2A2B3D] divide-y divide-[#DDBDD5]/30">
+              {isLoading ? (
+                <div className="px-6 py-12 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#AC9FBB] mx-auto mb-4"></div>
+                  <p className="text-[#59656F] dark:text-[#DDBDD5]">Loading problems...</p>
+                </div>
+              ) : filteredProblems.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <p className="text-[#59656F] dark:text-[#DDBDD5]">No problems found matching your filters.</p>
                 </div>
               ) : (
-                <div className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Click &quot;Run Code&quot; to see results</div>
+                filteredProblems.map((problem) => (
+                  <Link key={problem.id} href={`/problems/${problem.id}`}>
+                    <div className="grid grid-cols-12 px-6 py-4 hover:bg-[#F7EBEC] dark:hover:bg-[#1D1E2C] cursor-pointer transition-colors">
+                      <div className="col-span-1 font-medium text-[#1D1E2C] dark:text-white">{problem.displayId}</div>
+                      <div className="col-span-5">
+                        <div className="font-medium text-[#1D1E2C] dark:text-white">{problem.title}</div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {problem.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#DDBDD5]/30 text-[#59656F] dark:bg-[#59656F]/30 dark:text-[#DDBDD5]"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <Badge className={getDifficultyColor(problem.difficulty)}>{problem.difficulty}</Badge>
+                      </div>
+                      <div className="col-span-2 text-[#59656F] dark:text-[#DDBDD5]">{problem.acceptanceRate}</div>
+                      <div className="col-span-2 text-[#59656F] dark:text-[#DDBDD5]">
+                        {problem.solvedCount.toLocaleString()}
+                      </div>
+                    </div>
+                  </Link>
+                ))
               )}
             </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white dark:bg-[#2A2B3D] border-t border-[#DDBDD5]/30 px-4 py-4 mt-auto">
+        <div className="container mx-auto flex items-center justify-between">
+          <p className="text-sm text-[#59656F] dark:text-[#DDBDD5]">
+          © 2025 Compilo by ComπBs.
+          </p>
+          <div className="text-sm text-[#59656F] dark:text-[#DDBDD5]">{filteredProblems.length} problems available</div>
+        </div>
+      </footer>
     </div>
   )
 }

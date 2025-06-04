@@ -11,6 +11,7 @@ import { Logo } from "@/components/logo"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api"
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -21,22 +22,36 @@ export default function SignupPage() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const router = useRouter()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
+    setSuccess("")
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!")
+      setError("Passwords don't match!")
       setIsLoading(false)
       return
     }
 
-    // Mock API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    alert("Account created successfully! You can now login with hello / hello123")
-    router.push("/auth/login")
+    try {
+      const response = await apiClient.signup(formData.name, formData.email, formData.password)
+      
+      if (response.success) {
+        setSuccess("Account created successfully! Redirecting to login...")
+        setTimeout(() => {
+          router.push("/auth/login")
+        }, 2000)
+      } else {
+        setError("Signup failed. Please try again.")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed")
+    }
 
     setIsLoading(false)
   }
@@ -58,6 +73,16 @@ export default function SignupPage() {
         
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="p-3 text-sm text-green-500 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                  {success}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-[#1D1E2C] dark:text-white">
                   Username
