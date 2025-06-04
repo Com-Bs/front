@@ -40,27 +40,22 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Logo size="lg" className="justify-center mb-4" />
-          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">Welcome back! 👋</h1>
-          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">Ready to continue your coding journey?</p>
+          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">Welcome back!</h1>
+          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">Enter your credentials to access your account</p>
         </div>
 
         <Card className="bg-white/80 dark:bg-[#2A2B3D]/80 backdrop-blur-sm border-[#DDBDD5]/30">
-          <CardHeader>
-            <CardTitle className="text-[#1D1E2C] dark:text-white">Sign In</CardTitle>
-            <CardDescription className="text-[#59656F] dark:text-[#DDBDD5]">
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
+      
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-[#1D1E2C] dark:text-white">
-                  Email or Username
+                  Email
                 </Label>
                 <Input
                   id="email"
                   type="text"
-                  placeholder="hello"
+                  placeholder="example@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="border-[#DDBDD5]/50 focus:border-[#AC9FBB]"
@@ -76,7 +71,7 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="hello123"
+                    placeholder="PasswordExample123"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="border-[#DDBDD5]/50 focus:border-[#AC9FBB] pr-10"
@@ -98,14 +93,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-sm text-[#AC9FBB] hover:text-[#59656F] hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
 
               <Button
                 type="submit"

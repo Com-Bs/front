@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Logo } from "@/components/logo"
 import { Play, ChevronLeft, ChevronRight, Settings, User, LogOut, CheckCircle, XCircle, Clock } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-
+import Link from "next/link"
 interface TestCase {
   id: number
   input: string
@@ -27,11 +27,20 @@ interface Problem {
   testCases: TestCase[]
 }
 
+
+
 export default function AppPage() {
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(true)
   const [currentProblem, setCurrentProblem] = useState<Problem | null>(null)
   const [code, setCode] = useState("")
   const [isRunning, setIsRunning] = useState(false)
+  const [leftWidth, setLeftWidth] = useState(50) // percentage
+  const [isResizing, setIsResizing] = useState(false)
+  const [outputHeight, setOutputHeight] = useState(30) // percentage of right panel
+  const [isResizingVertical, setIsResizingVertical] = useState(false)
+  
+  const containerRef = useRef<HTMLDivElement>(null)
+  const rightPanelRef = useRef<HTMLDivElement>(null)
 
   // Mock API call to fetch problem
   useEffect(() => {
@@ -67,14 +76,70 @@ You can return the answer in any order.`,
       }
 
       setCurrentProblem(mockProblem)
-      setCode(`function twoSum(nums, target) {
-    // Write your solution here
-    
-}`)
+      setCode(`/* Write your solution here */`)
     }
 
     fetchProblem()
   }, [])
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }, [])
+
+  const handleVerticalMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizingVertical(true)
+  }, [])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isResizing && containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect()
+      const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100
+      
+      // Constrain between 20% and 80%
+      const constrainedWidth = Math.min(Math.max(newLeftWidth, 20), 80)
+      setLeftWidth(constrainedWidth)
+    }
+    
+    if (isResizingVertical && rightPanelRef.current) {
+      const rightPanelRect = rightPanelRef.current.getBoundingClientRect()
+      const headerHeight = 57 // Approximate header height
+      const availableHeight = rightPanelRect.height - headerHeight
+      const relativeY = e.clientY - rightPanelRect.top - headerHeight
+      const newOutputHeight = ((availableHeight - relativeY) / availableHeight) * 100
+      
+      // Constrain between 15% and 70%
+      const constrainedHeight = Math.min(Math.max(newOutputHeight, 15), 70)
+      setOutputHeight(constrainedHeight)
+    }
+  }, [isResizing, isResizingVertical])
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false)
+    setIsResizingVertical(false)
+  }, [])
+
+  useEffect(() => {
+    if (isResizing || isResizingVertical) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = isResizing ? 'col-resize' : 'row-resize'
+      document.body.style.userSelect = 'none'
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing, isResizingVertical, handleMouseMove, handleMouseUp])
 
   const handleRunCode = async () => {
     setIsRunning(true)
@@ -117,35 +182,26 @@ You can return the answer in any order.`,
       <header className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Logo size="sm" />
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-[#59656F] dark:text-[#DDBDD5]">Problem 1 of 150</span>
-              <Button variant="ghost" size="sm">
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+              <Link href="/">
+                <Logo size="sm" />
+              </Link>
           </div>
-
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm">
-              <Settings className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm">
-              <User className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm">
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/">
+                <LogOut className="w-4 h-4" />
+              </Link>
+            </Button>           
           </div>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden" ref={containerRef}>
         {/* Left Panel - Problem Description & Test Cases */}
-        <div className="w-1/2 flex flex-col border-r border-[#DDBDD5]/30">
+        <div 
+          className="flex flex-col border-r border-[#DDBDD5]/30"
+          style={{ width: `${leftWidth}%` }}
+        >
           {/* Problem Description */}
           <div className="flex-1 overflow-auto p-6 bg-white dark:bg-[#2A2B3D]">
             {currentProblem ? (
@@ -226,13 +282,25 @@ You can return the answer in any order.`,
           </Collapsible>
         </div>
 
+        {/* Resizable Divider */}
+        <div 
+          className="w-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-col-resize transition-colors duration-150 flex items-center justify-center group"
+          onMouseDown={handleMouseDown}
+        >
+          <div className="w-0.5 h-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
+        </div>
+
         {/* Right Panel - Code Editor */}
-        <div className="w-1/2 flex flex-col">
+        <div 
+          className="flex flex-col"
+          style={{ width: `${100 - leftWidth}%` }}
+          ref={rightPanelRef}
+        >
           {/* Editor Header */}
           <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">JavaScript</span>
+                <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">C-</span>
               </div>
               <Button
                 onClick={handleRunCode}
@@ -245,21 +313,35 @@ You can return the answer in any order.`,
             </div>
           </div>
 
-          {/* Code Editor (Wireframe) */}
-          <div className="flex-1 bg-[#1D1E2C] p-4">
+          {/* Code Editor */}
+          <div 
+            className="bg-[#1D1E2C] p-4"
+            style={{ height: `${100 - outputHeight}%` }}
+          >
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="w-full h-full bg-transparent text-white font-mono text-sm resize-none outline-none"
-              placeholder="// Start coding here..."
+              placeholder="/* Write your solution here */"
               style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
             />
           </div>
 
+          {/* Horizontal Resizable Divider */}
+          <div 
+            className="h-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-row-resize transition-colors duration-150 flex items-center justify-center group"
+            onMouseDown={handleVerticalMouseDown}
+          >
+            <div className="h-0.5 w-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
+          </div>
+
           {/* Output Panel */}
-          <div className="bg-white dark:bg-[#2A2B3D] border-t border-[#DDBDD5]/30 p-4 h-32">
+          <div 
+            className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col"
+            style={{ height: `${outputHeight}%` }}
+          >
             <h4 className="font-medium text-[#1D1E2C] dark:text-white mb-2">Output</h4>
-            <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded p-3 h-20 overflow-auto">
+            <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded p-3 flex-1 overflow-auto">
               {isRunning ? (
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#AC9FBB]"></div>
