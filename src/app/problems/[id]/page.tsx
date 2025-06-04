@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Logo } from "@/components/logo"
-import { Play, ChevronRight, Settings, User, LogOut, CheckCircle, XCircle, Clock, ArrowLeft } from "lucide-react"
+import { Navbar } from "@/components/navbar"
+import { Play, ChevronRight, CheckCircle, XCircle, Clock, ArrowLeft } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -232,37 +232,20 @@ You can return the answer in any order.`,
 
   return (
     <div className="h-screen bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col">
-      {/* Header */}
-      <header className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Logo size="sm" />
-            <div className="flex items-center gap-2">
-              <Link href="/app">
-                <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Problems</span>
-                </Button>
-              </Link>
-              <span className="text-sm text-[#59656F] dark:text-[#DDBDD5]">Problem {problemId}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm">
-              <Settings className="w-4 h-4" />
+      <Navbar />
+      
+      {/* Breadcrumb */}
+      <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 px-4 py-2">
+        <div className="flex items-center gap-2">
+          <Link href="/app">
+            <Button variant="ghost" size="sm" className="flex items-center gap-1">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Problems</span>
             </Button>
-            <Button variant="ghost" size="sm">
-              <User className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/">
-                <LogOut className="w-4 h-4" />
-              </Link>
-            </Button>
-          </div>
+          </Link>
+          <span className="text-sm text-[#59656F] dark:text-[#DDBDD5]">Problem {problemId}</span>
         </div>
-      </header>
+      </div>
 
       <div className="flex-1 flex overflow-hidden" ref={containerRef}>
         {/* Left Panel - Problem Description & Test Cases */}

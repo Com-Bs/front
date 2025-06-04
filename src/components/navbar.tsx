@@ -2,9 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
-import { LogOut } from "lucide-react"
+import { LogOut, Moon, Sun } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 
 interface NavbarProps {
   variant?: "default" | "landing"
@@ -12,10 +14,20 @@ interface NavbarProps {
 
 export function Navbar({ variant = "default" }: NavbarProps) {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogout = () => {
     localStorage.clear()
     router.push("/")
+  }
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   if (variant === "landing") {
@@ -24,6 +36,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
         <nav className="flex items-center justify-between">
           <Logo size="lg" />
           <div className="flex items-center gap-4">
+            {mounted && (
+              <Button variant="ghost" size="sm" onClick={toggleTheme}>
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+            )}
             <Link href="/auth/login">
               <Button variant="ghost" className="text-[#59656F] dark:text-[#DDBDD5]">
                 Sign In
@@ -47,6 +64,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <Logo size="sm" />
         </Link>
         <div className="flex items-center gap-2">
+          {mounted && (
+            <Button variant="ghost" size="sm" onClick={toggleTheme}>
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut className="w-4 h-4" />
           </Button>
