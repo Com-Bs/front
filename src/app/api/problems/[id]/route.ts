@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const problemId = Number.parseInt(params.id)
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const problemId = Number.parseInt(id)
 
   // Mock problem data
   const mockProblem = {
