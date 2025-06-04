@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { code, problemId, language } = await request.json()
+    await request.json() // Extract parameters when needed
 
     // Mock code execution
     await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       totalExecutionTime: "6ms",
       memoryUsage: "14.2 MB",
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ success: false, message: "Code execution failed" }, { status: 500 })
   }
 }

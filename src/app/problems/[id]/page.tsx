@@ -416,7 +416,7 @@ You can return the answer in any order.`,
                   <span className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Running tests...</span>
                 </div>
               ) : (
-                <div className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Click "Run Code" to see results</div>
+                <div className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Click &quot;Run Code&quot; to see results</div>
               )}
             </div>
           </div>
