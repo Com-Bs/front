@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
-import { Code, Zap, Trophy, Users } from "lucide-react"
+import { Code, Zap, Users } from "lucide-react"
 import Link from "next/link"
 
 export default function LandingPage() {
@@ -33,7 +33,7 @@ export default function LandingPage() {
           </h1>
           <p className="text-xl text-[#59656F] dark:text-[#DDBDD5] mb-8 leading-relaxed">
             Start your programming journey with Compilo, the ultimate platform for learning how to code. 
-            Whether you're a complete beginner or looking to sharpen your skills, we provide the tools and resources you need to succeed.
+            Whether you&apos;re a complete beginner or looking to sharpen your skills, we provide the tools and resources you need to succeed.
             
           </p>
           <div className="flex gap-4 justify-center mb-16">
