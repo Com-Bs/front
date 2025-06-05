@@ -1,10 +1,13 @@
 export interface CodeRunResult {
-  results: Array<{
-    status?: "Error" | "Success"
-    error?: { message: string; line: number; column: number }
-    output: [number] | null
-    expected_output: [number]
+  result: Array<{
+    status: "Success" | "Failed"
+    output: number[]
+    expectedOutput: number[]
   }>
+  error?: string
+  status?: "Success" | "Error"
+  line?: number
+  column?: number
 }
 
 export interface Problem {

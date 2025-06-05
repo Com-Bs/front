@@ -37,7 +37,7 @@ export default function ProblemPage() {
   const [isResizing, setIsResizing] = useState(false)
   const [outputHeight, setOutputHeight] = useState(30) // percentage of right panel
   const [isResizingVertical, setIsResizingVertical] = useState(false)
-  const [results, setResults] = useState<CodeRunResult["results"] | null>(null)
+  const [results, setResults] = useState<CodeRunResult | null>(null)
   const [mobileView, setMobileView] = useState<"problem" | "code">("problem")
   const [isDesktop, setIsDesktop] = useState(false)
   
@@ -243,12 +243,12 @@ export default function ProblemPage() {
 
     try {
       const data = await apiClient.runCode(code, problemId)
-      setResults(data.results)
+      setResults(data)
       
       if (currentProblem) {
         const updatedTestCases = currentProblem.testCases.map((testCase, index) => ({
           ...testCase,
-          status: data.results[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
+          status: data.result[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
         }))
 
         setCurrentProblem({
@@ -555,13 +555,11 @@ export default function ProblemPage() {
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#AC9FBB]"></div>
                   <span className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Running tests...</span>
                 </div>
-              ) : results?.some(r => r.error) ? (
+              ) : results?.error ? (
                 <div className="text-red-500 text-sm">
-                  {results.find(r => r.error)?.error && (
-                    <>
-                      <p>Error: {results.find(r => r.error)?.error?.message}</p>
-                      <p>Line: {results.find(r => r.error)?.error?.line}, Column: {results.find(r => r.error)?.error?.column}</p>
-                    </>
+                  <p>Error: {results.error}</p>
+                  {results.line && results.column && (
+                    <p>Line: {results.line}, Column: {results.column}</p>
                   )}
                 </div>
               ) : (

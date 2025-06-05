@@ -32,14 +32,8 @@ export async function POST(request: NextRequest) {
       }, { status: backendResponse.status })
     }
 
-    // Transform response to match frontend expectations
-    return NextResponse.json({
-      success: true,
-      results: data.results || [],
-      allTestsPassed: data.allTestsPassed || false,
-      totalExecutionTime: data.totalExecutionTime || "0ms",
-      memoryUsage: data.memoryUsage || "0 MB",
-    })
+    // Pass through backend response
+    return NextResponse.json(data)
   } catch (error) {
     console.error('Code execution error:', error)
     return NextResponse.json({ success: false, message: "Code execution failed" }, { status: 500 })
