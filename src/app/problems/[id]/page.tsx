@@ -36,9 +36,21 @@ export default function ProblemPage() {
   const [isResizingVertical, setIsResizingVertical] = useState(false)
   const [results, setResults] = useState<CodeRunResult["results"] | null>(null)
   const [mobileView, setMobileView] = useState<"problem" | "code">("problem")
+  const [isDesktop, setIsDesktop] = useState(false)
   
   const containerRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
+
+  // Check if desktop
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024)
+    }
+    
+    checkDesktop()
+    window.addEventListener('resize', checkDesktop)
+    return () => window.removeEventListener('resize', checkDesktop)
+  }, [])
 
   // Fetch problem from API
   useEffect(() => {
@@ -215,11 +227,12 @@ export default function ProblemPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden" ref={containerRef}>
         {/* Problem Description & Test Cases */}
-        <div className={`flex flex-col lg:border-r border-[#DDBDD5]/30 lg:w-1/2 flex-1 ${
+        <div className={`flex flex-col lg:border-r border-[#DDBDD5]/30 ${isDesktop ? '' : 'flex-1'} ${
           mobileView === "code" ? "hidden lg:flex" : "flex"
-        }`}>
+        }`}
+        style={{ width: isDesktop ? `${leftWidth}%` : undefined }}>
           {/* Problem Description */}
           <div className="flex-1 overflow-auto p-6 bg-white dark:bg-[#2A2B3D]">
             {currentProblem ? (
@@ -297,10 +310,20 @@ export default function ProblemPage() {
           </Collapsible>
         </div>
 
+        {/* Resizable Divider - Desktop Only */}
+        <div 
+          className="hidden lg:flex w-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-col-resize transition-colors duration-150 items-center justify-center group"
+          onMouseDown={handleMouseDown}
+        >
+          <div className="w-0.5 h-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
+        </div>
+
         {/* Code Editor Panel */}
-        <div className={`flex flex-col lg:w-1/2 flex-1 ${
+        <div className={`flex flex-col ${isDesktop ? '' : 'flex-1'} ${
           mobileView === "problem" ? "hidden lg:flex" : "flex"
-        }`}>
+        }`}
+        ref={rightPanelRef}
+        style={{ width: isDesktop ? `${100 - leftWidth}%` : undefined }}>
           {/* Editor Header */}
           <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 p-3">
             <div className="flex items-center justify-between">
@@ -319,7 +342,10 @@ export default function ProblemPage() {
           </div>
 
           {/* Code Editor */}
-          <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 flex-[3] min-h-0">
+          <div 
+            className={`bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 ${isDesktop ? '' : 'flex-[3]'} min-h-0`}
+            style={{ height: isDesktop ? `${100 - outputHeight}%` : undefined }}
+          >
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -329,8 +355,19 @@ export default function ProblemPage() {
             />
           </div>
 
+          {/* Horizontal Resizer - Desktop Only */}
+          <div 
+            className="hidden lg:flex h-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-row-resize transition-colors duration-150 items-center justify-center group"
+            onMouseDown={handleVerticalMouseDown}
+          >
+            <div className="h-0.5 w-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
+          </div>
+
           {/* Output Panel */}
-          <div className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col border-t border-[#DDBDD5]/30 flex-1 min-h-0">
+          <div 
+            className={`bg-white dark:bg-[#2A2B3D] p-4 flex flex-col border-t lg:border-t-0 border-[#DDBDD5]/30 ${isDesktop ? '' : 'flex-1'} min-h-0`}
+            style={{ height: isDesktop ? `${outputHeight}%` : undefined }}
+          >
             <h4 className="font-medium text-[#1D1E2C] dark:text-white mb-2">Output</h4>
             <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded p-3 flex-1 overflow-auto">
               {isRunning ? (
