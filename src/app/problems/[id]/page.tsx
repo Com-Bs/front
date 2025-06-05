@@ -35,6 +35,7 @@ export default function ProblemPage() {
   const [outputHeight, setOutputHeight] = useState(30) // percentage of right panel
   const [isResizingVertical, setIsResizingVertical] = useState(false)
   const [results, setResults] = useState<CodeRunResult["results"] | null>(null)
+  const [mobileView, setMobileView] = useState<"problem" | "code">("problem")
   
   const containerRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
@@ -188,9 +189,37 @@ export default function ProblemPage() {
         </div>
       </div>
 
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30">
+        <div className="flex">
+          <button
+            onClick={() => setMobileView("problem")}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              mobileView === "problem"
+                ? "text-[#AC9FBB] border-b-2 border-[#AC9FBB] bg-[#F7EBEC] dark:bg-[#1D1E2C]"
+                : "text-[#59656F] dark:text-[#DDBDD5] hover:text-[#AC9FBB]"
+            }`}
+          >
+            Problem
+          </button>
+          <button
+            onClick={() => setMobileView("code")}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              mobileView === "code"
+                ? "text-[#AC9FBB] border-b-2 border-[#AC9FBB] bg-[#F7EBEC] dark:bg-[#1D1E2C]"
+                : "text-[#59656F] dark:text-[#DDBDD5] hover:text-[#AC9FBB]"
+            }`}
+          >
+            Code
+          </button>
+        </div>
+      </div>
+
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Problem Description & Test Cases */}
-        <div className="flex flex-col lg:border-r border-[#DDBDD5]/30 lg:w-1/2">
+        <div className={`flex flex-col lg:border-r border-[#DDBDD5]/30 lg:w-1/2 ${
+          mobileView === "code" ? "hidden lg:flex" : "flex"
+        }`}>
           {/* Problem Description */}
           <div className="flex-1 overflow-auto p-6 bg-white dark:bg-[#2A2B3D]">
             {currentProblem ? (
@@ -269,7 +298,9 @@ export default function ProblemPage() {
         </div>
 
         {/* Code Editor Panel */}
-        <div className="flex flex-col lg:w-1/2">
+        <div className={`flex flex-col lg:w-1/2 flex-1 ${
+          mobileView === "problem" ? "hidden lg:flex" : "flex"
+        }`}>
           {/* Editor Header */}
           <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 p-3">
             <div className="flex items-center justify-between">
@@ -288,7 +319,7 @@ export default function ProblemPage() {
           </div>
 
           {/* Code Editor */}
-          <div className="bg-[#1D1E2C] p-4 flex-1 min-h-0">
+          <div className="bg-[#1D1E2C] p-4 flex-[3] min-h-0">
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -299,7 +330,7 @@ export default function ProblemPage() {
           </div>
 
           {/* Output Panel */}
-          <div className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col h-48 border-t border-[#DDBDD5]/30">
+          <div className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col border-t border-[#DDBDD5]/30 flex-1 min-h-0">
             <h4 className="font-medium text-[#1D1E2C] dark:text-white mb-2">Output</h4>
             <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded p-3 flex-1 overflow-auto">
               {isRunning ? (
