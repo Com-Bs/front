@@ -123,7 +123,7 @@ export default function ProblemsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col">
+    <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col">
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8">
