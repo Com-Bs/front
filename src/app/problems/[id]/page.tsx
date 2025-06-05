@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { apiClient } from "@/lib/api"
+import type { CodeRunResult, Problem, UserSolution } from "@/lib/api-types"
 
 interface TestCase {
   id: number
@@ -17,22 +18,8 @@ interface TestCase {
   status: "pending" | "passed" | "failed"
 }
 
-interface Problem {
-  id: string // Changed from number to string for MongoDB ObjectID
-  title: string
-  difficulty: "Easy" | "Medium" | "Hard"
-  description: string
-  examples: Array<{
-    input: string
-    output: string
-    explanation?: string
-  }>
+interface ProblemWithTestStatus extends Problem {
   testCases: TestCase[]
-  starterCode?: {
-    javascript?: string
-    python?: string
-    java?: string
-  }
 }
 
 export default function ProblemPage() {
@@ -40,16 +27,33 @@ export default function ProblemPage() {
   const problemId = params?.id as string
 
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(true)
-  const [currentProblem, setCurrentProblem] = useState<Problem | null>(null)
+  const [isSolutionsPanelOpen, setIsSolutionsPanelOpen] = useState(false)
+  const [currentProblem, setCurrentProblem] = useState<ProblemWithTestStatus | null>(null)
+  const [previousSolutions, setPreviousSolutions] = useState<UserSolution[]>([])
+  const [isLoadingSolutions, setIsLoadingSolutions] = useState(false)
   const [code, setCode] = useState("")
   const [isRunning, setIsRunning] = useState(false)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
   const [outputHeight, setOutputHeight] = useState(30) // percentage of right panel
   const [isResizingVertical, setIsResizingVertical] = useState(false)
+  const [results, setResults] = useState<CodeRunResult["results"] | null>(null)
+  const [mobileView, setMobileView] = useState<"problem" | "code">("problem")
+  const [isDesktop, setIsDesktop] = useState(false)
   
   const containerRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
+
+  // Check if desktop
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024)
+    }
+    
+    checkDesktop()
+    window.addEventListener('resize', checkDesktop)
+    return () => window.removeEventListener('resize', checkDesktop)
+  }, [])
 
   // Fetch problem from API
   useEffect(() => {
@@ -60,24 +64,17 @@ export default function ProblemPage() {
         const data = await apiClient.getProblem(problemId)
         
         if (data.success && data.problem) {
-          const transformedProblem: Problem = {
-            id: data.problem.id, // Keep as string for MongoDB ObjectID
-            title: data.problem.title,
-            difficulty: data.problem.difficulty as "Easy" | "Medium" | "Hard",
-            description: data.problem.description,
-            testCases: data.problem.test_cases.map((tc: { input: string; output: string }, index: number) => ({
+          const problemWithTests: ProblemWithTestStatus = {
+            ...data.problem,
+            difficulty: data.problem.difficulty.charAt(0).toUpperCase() + data.problem.difficulty.slice(1).toLowerCase() as "Easy" | "Medium" | "Hard",
+            testCases: data.problem.test_cases.map((tc, index) => ({
               id: index + 1,
               input: tc.input,
               expectedOutput: tc.output,
               status: "pending"
-            })),
-            examples: data.problem.test_cases.slice(0, 2).map((tc: { input: string; output: string }) => ({
-              input: tc.input,
-              output: tc.output
             }))
           }
-          setCurrentProblem(transformedProblem)
-          // Set default code
+          setCurrentProblem(problemWithTests)
           setCode(`function solution() {
     // Write your solution here
     
@@ -85,12 +82,102 @@ export default function ProblemPage() {
         }
       } catch (error) {
         console.error('Failed to fetch problem:', error)
-        // No fallback - let the user see the error
         setCurrentProblem(null)
       }
     }
 
+    const fetchSolutions = async () => {
+      if (!problemId) return
+      
+      try {
+        setIsLoadingSolutions(true)
+        
+        // Mock data for development - remove when API is ready
+        const mockSolutions: UserSolution[] = [
+          {
+            id: "1",
+            problemId: problemId,
+            userId: "user123",
+            code: `function solution(nums, target) {
+  // Two Sum solution
+  const map = new Map();
+  for (let i = 0; i < nums.length; i++) {
+    const complement = target - nums[i];
+    if (map.has(complement)) {
+      return [map.get(complement), i];
+    }
+    map.set(nums[i], i);
+  }
+  return [];
+}`,
+            status: "passed",
+            testResults: {
+              passed: 3,
+              total: 3
+            },
+            submittedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
+            executionTime: "2ms"
+          },
+          {
+            id: "2", 
+            problemId: problemId,
+            userId: "user123",
+            code: `function solution(nums, target) {
+  // Brute force attempt
+  for (let i = 0; i < nums.length; i++) {
+    for (let j = i + 1; j < nums.length; j++) {
+      if (nums[i] + nums[j] === target) {
+        return [i, j];
+      }
+    }
+  }
+  return [];
+}`,
+            status: "failed",
+            testResults: {
+              passed: 1,
+              total: 3
+            },
+            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
+            // No executionTime to test optional behavior
+          },
+          {
+            id: "3", 
+            problemId: problemId,
+            userId: "user123",
+            code: `function solution(nums, target) {
+  // Another attempt without timing
+  return nums.map((num, i) => i);
+}`,
+            status: "partial",
+            testResults: {
+              passed: 2,
+              total: 3
+            },
+            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
+            // No executionTime or testResults to test edge cases
+          }
+        ];
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setPreviousSolutions(mockSolutions);
+        
+        // Uncomment when API is ready:
+        // const data = await apiClient.getUserSolutions(problemId)
+        // if (data.success) {
+        //   setPreviousSolutions(data.solutions)
+        // }
+      } catch (error) {
+        console.error('Failed to fetch solutions:', error)
+        setPreviousSolutions([])
+      } finally {
+        setIsLoadingSolutions(false)
+      }
+    }
+
     fetchProblem()
+    fetchSolutions()
   }, [problemId])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -152,15 +239,16 @@ export default function ProblemPage() {
 
   const handleRunCode = async () => {
     setIsRunning(true)
+    setResults(null)
 
     try {
-      const data = await apiClient.runCode(code, 'javascript', problemId)
+      const data = await apiClient.runCode(code, problemId)
+      setResults(data.results)
       
-      if (data.success && currentProblem) {
-        // Update test cases with results
+      if (currentProblem) {
         const updatedTestCases = currentProblem.testCases.map((testCase, index) => ({
           ...testCase,
-          status: data.results?.[index]?.status === "passed" ? "passed" : "failed" as "passed" | "failed",
+          status: data.results[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
         }))
 
         setCurrentProblem({
@@ -170,7 +258,6 @@ export default function ProblemPage() {
       }
     } catch (error) {
       console.error('Failed to run code:', error)
-      // No fallback - show actual error to user
     }
 
     setIsRunning(false)
@@ -189,12 +276,34 @@ export default function ProblemPage() {
     }
   }
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "passed":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      case "failed":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+      case "partial":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   return (
     <div className="h-screen bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col">
       <Navbar />
       
       {/* Breadcrumb */}
-      <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 px-4 py-2">
+      <div className="bg-white dark:bg-[#2A2B3D] px-4 py-2 lg:border-b lg:border-[#DDBDD5]/30">
         <div className="flex items-center gap-2">
           <Link href="/app">
             <Button variant="ghost" size="sm" className="flex items-center gap-1">
@@ -208,12 +317,38 @@ export default function ProblemPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-        {/* Left Panel - Problem Description & Test Cases */}
-        <div 
-          className="flex flex-col border-r border-[#DDBDD5]/30"
-          style={{ width: `${leftWidth}%` }}
-        >
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden bg-white dark:bg-[#2A2B3D] px-2 pt-2 shadow-none -mt-px">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setMobileView("problem")}
+            className={`flex-1 px-4 text-sm font-medium transition-all duration-200 rounded-t-lg relative ${
+              mobileView === "problem"
+                ? "py-4 bg-white dark:bg-[#2A2B3D] text-[#1D1E2C] dark:text-white border-x border-t border-[#DDBDD5]/30 -mb-px z-10 shadow-[-4px_-2px_8px_-4px_rgba(0,0,0,0.15),4px_-2px_8px_-4px_rgba(0,0,0,0.15),0_-4px_8px_-4px_rgba(0,0,0,0.15)]"
+                : "py-3 bg-[#DDBDD5]/30 dark:bg-[#59656F]/30 text-[#59656F] dark:text-[#DDBDD5] hover:bg-[#DDBDD5]/50 dark:hover:bg-[#59656F]/50 border-x border-t border-[#DDBDD5]/20 mt-1"
+            }`}
+          >
+            Problem
+          </button>
+          <button
+            onClick={() => setMobileView("code")}
+            className={`flex-1 px-4 text-sm font-medium transition-all duration-200 rounded-t-lg relative ${
+              mobileView === "code"
+                ? "py-4 bg-white dark:bg-[#2A2B3D] text-[#1D1E2C] dark:text-white border-x border-t border-[#DDBDD5]/30 -mb-px z-10 shadow-[-4px_-2px_8px_-4px_rgba(0,0,0,0.15),4px_-2px_8px_-4px_rgba(0,0,0,0.15),0_-4px_8px_-4px_rgba(0,0,0,0.15)]"
+                : "py-3 bg-[#DDBDD5]/30 dark:bg-[#59656F]/30 text-[#59656F] dark:text-[#DDBDD5] hover:bg-[#DDBDD5]/50 dark:hover:bg-[#59656F]/50 border-x border-t border-[#DDBDD5]/20 mt-1"
+            }`}
+          >
+            Code
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden" ref={containerRef}>
+        {/* Problem Description & Test Cases */}
+        <div className={`flex flex-col lg:border-r border-[#DDBDD5]/30 ${isDesktop ? '' : 'flex-1'} ${
+          mobileView === "code" ? "hidden lg:flex" : "flex"
+        }`}
+        style={{ width: isDesktop ? `${leftWidth}%` : undefined }}>
           {/* Problem Description */}
           <div className="flex-1 overflow-auto p-6 bg-white dark:bg-[#2A2B3D]">
             {currentProblem ? (
@@ -229,23 +364,17 @@ export default function ProblemPage() {
 
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-[#1D1E2C] dark:text-white">Examples</h3>
-                  {currentProblem.examples.map((example, index) => (
+                  {currentProblem.test_cases.slice(0, 2).map((tc, index) => (
                     <div key={index} className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded-lg p-4">
                       <div className="space-y-2">
                         <div>
                           <span className="font-medium text-[#1D1E2C] dark:text-white">Input: </span>
-                          <code className="text-[#AC9FBB]">{example.input}</code>
+                          <code className="text-[#AC9FBB]">{tc.input}</code>
                         </div>
                         <div>
                           <span className="font-medium text-[#1D1E2C] dark:text-white">Output: </span>
-                          <code className="text-[#AC9FBB]">{example.output}</code>
+                          <code className="text-[#AC9FBB]">{tc.output}</code>
                         </div>
-                        {example.explanation && (
-                          <div>
-                            <span className="font-medium text-[#1D1E2C] dark:text-white">Explanation: </span>
-                            <span className="text-[#59656F] dark:text-[#DDBDD5]">{example.explanation}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -295,27 +424,91 @@ export default function ProblemPage() {
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Previous Solutions Panel */}
+          <Collapsible open={isSolutionsPanelOpen} onOpenChange={setIsSolutionsPanelOpen}>
+            <CollapsibleTrigger asChild>
+              <div className="bg-[#DDBDD5]/20 dark:bg-[#59656F]/20 border-t border-[#DDBDD5]/30 p-3 cursor-pointer hover:bg-[#DDBDD5]/30 dark:hover:bg-[#59656F]/30">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-[#1D1E2C] dark:text-white">
+                    Previous Solutions ({previousSolutions.length})
+                  </h3>
+                  <ChevronRight className={`w-4 h-4 transition-transform ${isSolutionsPanelOpen ? "rotate-90" : ""}`} />
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="bg-white dark:bg-[#2A2B3D] p-4 max-h-48 lg:max-h-64 overflow-auto custom-scrollbar">
+                {isLoadingSolutions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#AC9FBB]"></div>
+                    <span className="ml-2 text-[#59656F] dark:text-[#DDBDD5] text-sm">Loading solutions...</span>
+                  </div>
+                ) : previousSolutions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-[#59656F] dark:text-[#DDBDD5] text-sm">No previous solutions found</p>
+                    <p className="text-xs text-[#59656F] dark:text-[#DDBDD5] mt-1">Submit your first solution to see it here!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {previousSolutions.map((solution, index) => (
+                      <div
+                        key={solution.id}
+                        className="border border-[#DDBDD5]/30 rounded-lg p-3 hover:bg-[#F7EBEC] dark:hover:bg-[#1D1E2C] transition-colors cursor-pointer"
+                        onClick={() => setCode(solution.code)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">
+                              Solution #{previousSolutions.length - index}
+                            </span>
+                            <div className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(solution.status)}`}>
+                              {solution.status}
+                            </div>
+                          </div>
+                          <span className="text-xs text-[#59656F] dark:text-[#DDBDD5]">
+                            {formatDate(solution.submittedAt)}
+                          </span>
+                        </div>
+                        
+                        {solution.testResults && (
+                          <div className="flex items-center gap-4 text-xs text-[#59656F] dark:text-[#DDBDD5]">
+                            <span>Tests: {solution.testResults.passed}/{solution.testResults.total}</span>
+                            {solution.executionTime && <span>Time: {solution.executionTime}</span>}
+                          </div>
+                        )}
+                        
+                        <div className="text-xs text-[#AC9FBB] mt-2 text-right">
+                          Click to load this solution
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
-        {/* Resizable Divider */}
+        {/* Resizable Divider - Desktop Only */}
         <div 
-          className="w-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-col-resize transition-colors duration-150 flex items-center justify-center group"
+          className="hidden lg:flex w-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-col-resize transition-colors duration-150 items-center justify-center group"
           onMouseDown={handleMouseDown}
         >
           <div className="w-0.5 h-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
         </div>
 
-        {/* Right Panel - Code Editor */}
-        <div 
-          className="flex flex-col"
-          style={{ width: `${100 - leftWidth}%` }}
-          ref={rightPanelRef}
-        >
+        {/* Code Editor Panel */}
+        <div className={`flex flex-col ${isDesktop ? '' : 'flex-1'} ${
+          mobileView === "problem" ? "hidden lg:flex" : "flex"
+        }`}
+        ref={rightPanelRef}
+        style={{ width: isDesktop ? `${100 - leftWidth}%` : undefined }}>
           {/* Editor Header */}
           <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">JavaScript</span>
+                <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">C - </span>
               </div>
               <Button
                 onClick={handleRunCode}
@@ -330,21 +523,21 @@ export default function ProblemPage() {
 
           {/* Code Editor */}
           <div 
-            className="bg-[#1D1E2C] p-4"
-            style={{ height: `${100 - outputHeight}%` }}
+            className={`bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 ${isDesktop ? '' : 'flex-[3]'} min-h-0`}
+            style={{ height: isDesktop ? `${100 - outputHeight}%` : undefined }}
           >
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full bg-transparent text-white font-mono text-sm resize-none outline-none"
+              className="w-full h-full bg-transparent text-[#1D1E2C] dark:text-white font-mono text-sm resize-none outline-none"
               placeholder="// Start coding here..."
               style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
             />
           </div>
 
-          {/* Horizontal Resizable Divider */}
+          {/* Horizontal Resizer - Desktop Only */}
           <div 
-            className="h-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-row-resize transition-colors duration-150 flex items-center justify-center group"
+            className="hidden lg:flex h-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-row-resize transition-colors duration-150 items-center justify-center group"
             onMouseDown={handleVerticalMouseDown}
           >
             <div className="h-0.5 w-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
@@ -352,8 +545,8 @@ export default function ProblemPage() {
 
           {/* Output Panel */}
           <div 
-            className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col"
-            style={{ height: `${outputHeight}%` }}
+            className={`bg-white dark:bg-[#2A2B3D] p-4 flex flex-col border-t lg:border-t-0 border-[#DDBDD5]/30 ${isDesktop ? '' : 'flex-1'} min-h-0`}
+            style={{ height: isDesktop ? `${outputHeight}%` : undefined }}
           >
             <h4 className="font-medium text-[#1D1E2C] dark:text-white mb-2">Output</h4>
             <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded p-3 flex-1 overflow-auto">
@@ -361,6 +554,15 @@ export default function ProblemPage() {
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#AC9FBB]"></div>
                   <span className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Running tests...</span>
+                </div>
+              ) : results?.some(r => r.error) ? (
+                <div className="text-red-500 text-sm">
+                  {results.find(r => r.error)?.error && (
+                    <>
+                      <p>Error: {results.find(r => r.error)?.error?.message}</p>
+                      <p>Line: {results.find(r => r.error)?.error?.line}, Column: {results.find(r => r.error)?.error?.column}</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Click &quot;Run Code&quot; to see results</div>

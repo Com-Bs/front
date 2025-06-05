@@ -28,7 +28,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      await login(email, password)
+      await login(email.trim(), password)
       router.push("/app")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
@@ -38,7 +38,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F7EBEC] via-white to-[#DDBDD5] dark:from-[#1D1E2C] dark:via-[#2A2B3D] dark:to-[#59656F] flex items-center justify-center p-4">
+    <div className="h-screen bg-gradient-to-br from-[#F7EBEC] via-white to-[#DDBDD5] dark:from-[#1D1E2C] dark:via-[#2A2B3D] dark:to-[#59656F] flex items-center justify-center p-4 overflow-hidden overscroll-none">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Logo size="lg" className="justify-center mb-4" />
