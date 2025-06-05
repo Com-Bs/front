@@ -257,7 +257,7 @@ export default function ProblemPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#AC9FBB] mx-auto mb-4"></div>
                   <p className="text-[#59656F] dark:text-[#DDBDD5]">Loading problem...</p>
                   <p className="text-sm text-[#59656F] dark:text-[#DDBDD5] mt-2">
-                    If this takes too long, the problem might not exist or there's a backend issue.
+                    If this takes too long, the problem might not exist or there&apos;s a backend issue.
                   </p>
                 </div>
               </div>
