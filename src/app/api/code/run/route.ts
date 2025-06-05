@@ -23,17 +23,21 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body)
     })
 
-    const data = await backendResponse.json()
-
-    if (!backendResponse.ok) {
+    // Parse response as JSON regardless of status
+    let data
+    try {
+      const responseText = await backendResponse.text()
+      data = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('Failed to parse backend response as JSON:', parseError)
       return NextResponse.json({ 
         success: false, 
-        message: "Code execution failed" 
-      }, { status: backendResponse.status })
+        message: "Backend returned invalid response" 
+      }, { status: 500 })
     }
 
-    // Pass through backend response
-    return NextResponse.json(data)
+    // Pass through backend response with original status
+    return NextResponse.json(data, { status: backendResponse.status })
   } catch (error) {
     console.error('Code execution error:', error)
     return NextResponse.json({ success: false, message: "Code execution failed" }, { status: 500 })

@@ -75,10 +75,8 @@ export default function ProblemPage() {
             }))
           }
           setCurrentProblem(problemWithTests)
-          setCode(`function solution() {
-    // Write your solution here
-    
-}`)
+          setCode(`    /* Write your solution here */
+    `)
         }
       } catch (error) {
         console.error('Failed to fetch problem:', error)
@@ -237,12 +235,30 @@ export default function ProblemPage() {
     }
   }, [isResizing, isResizingVertical, handleMouseMove, handleMouseUp])
 
+  // Helper function to wrap user code with function signature
+  const wrapCodeWithSignature = (userCode: string, problem: Problem): string => {
+    if (!problem.function_name || !problem.arguments) {
+      // If no function signature provided, return user code as-is
+      return userCode
+    }
+
+    const functionName = problem.function_name
+    const params = problem.arguments.map(arg => `${arg.type} ${arg.name}`).join(', ')
+    
+    // Wrap user code in the required function signature (C minus always returns int)
+    return `int ${functionName}(${params}) {
+${userCode}
+}`
+  }
+
   const handleRunCode = async () => {
     setIsRunning(true)
     setResults(null)
 
     try {
-      const data = await apiClient.runCode(code, problemId)
+      // Wrap user code with function signature if available
+      const wrappedCode = currentProblem ? wrapCodeWithSignature(code, currentProblem) : code
+      const data = await apiClient.runCode(wrappedCode, problemId)
       setResults(data)
       
       if (currentProblem) {
@@ -523,16 +539,45 @@ export default function ProblemPage() {
 
           {/* Code Editor */}
           <div 
-            className={`bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 ${isDesktop ? '' : 'flex-[3]'} min-h-0`}
+            className={`bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 ${isDesktop ? '' : 'flex-[3]'} min-h-0 flex flex-col`}
             style={{ height: isDesktop ? `${100 - outputHeight}%` : undefined }}
           >
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full bg-transparent text-[#1D1E2C] dark:text-white font-mono text-sm resize-none outline-none"
-              placeholder="// Start coding here..."
-              style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
-            />
+            {/* Function Signature (Read-only) */}
+            {currentProblem?.function_name && currentProblem?.arguments && (
+              <div className="mb-2">
+                <div className="text-xs text-[#59656F] dark:text-[#DDBDD5] mb-1">Function Signature (read-only):</div>
+                <div 
+                  className="bg-[#DDBDD5]/20 border border-[#DDBDD5]/30 rounded p-2 text-[#1D1E2C] dark:text-white font-mono text-sm"
+                  style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
+                >
+                  {`int ${currentProblem.function_name}(${currentProblem.arguments.map(arg => `${arg.type} ${arg.name}`).join(', ')}) {`}
+                </div>
+              </div>
+            )}
+            
+            {/* Function Body Editor */}
+            <div className="flex-1 flex flex-col">
+              {currentProblem?.function_name && (
+                <div className="text-xs text-[#59656F] dark:text-[#DDBDD5] mb-1">Function Body:</div>
+              )}
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="flex-1 w-full bg-transparent text-[#1D1E2C] dark:text-white font-mono text-sm resize-none outline-none"
+                placeholder={currentProblem?.function_name ? "    // Write your function body here..." : "// Start coding here..."}
+                style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
+              />
+            </div>
+            
+            {/* Closing Brace (Read-only) */}
+            {currentProblem?.function_name && currentProblem?.arguments && (
+              <div 
+                className="bg-[#DDBDD5]/20 border border-[#DDBDD5]/30 rounded p-2 text-[#1D1E2C] dark:text-white font-mono text-sm mt-2"
+                style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
+              >
+                {`}`}
+              </div>
+            )}
           </div>
 
           {/* Horizontal Resizer - Desktop Only */}

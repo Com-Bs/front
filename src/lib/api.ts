@@ -186,10 +186,33 @@ class ApiClient {
 
   // Code execution endpoint
   async runCode(code: string, problemId?: string) {
-    return this.request<CodeRunResult>('/code/run', {
+    console.log('Running code:', code, 'for problem:', problemId)
+    
+    // Special handling for code execution - we want to return error responses too
+    const url = `${this.baseUrl}/code/run`
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
+      headers,
       body: JSON.stringify({ code, problemId }),
     })
+    
+    // Handle unauthorized responses
+    if (response.status === 401) {
+      this.handleUnauthorized()
+      throw new Error('Unauthorized - please log in again')
+    }
+    
+    // For code execution, return the JSON response regardless of status
+    // This allows us to get error details with line/column info
+    return response.json() as Promise<CodeRunResult>
   }
 
   // Get user's previous solutions for a problem

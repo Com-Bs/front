@@ -19,6 +19,9 @@ export interface Problem {
   test_cases: Array<{ input: string; output: string }>
   created_at: string
   updated_at: string
+  // Function signature for code compilation (C minus - always returns int)
+  function_name?: string
+  arguments?: Array<{ name: string; type: string }>
 }
 
 export interface ProblemResponse {
