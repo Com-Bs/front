@@ -21,4 +21,39 @@ export interface Problem {
 export interface ProblemResponse {
   success: boolean
   problem: Problem
+}
+
+// User Solution Types
+export interface UserSolution {
+  id: string
+  problemId: string
+  userId: string
+  code: string
+  status: "pending" | "passed" | "failed" | "partial"
+  testResults?: {
+    passed: number
+    total: number
+    details?: Array<{
+      testCaseId: number
+      status: "passed" | "failed"
+      expectedOutput: string
+      actualOutput: string
+      executionTime?: string
+    }>
+  }
+  submittedAt: string
+  executionTime?: string
+  memoryUsage?: string
+}
+
+export interface UserSolutionsRequest {
+  userId?: string // Optional since it comes from JWT
+  problemId: string
+}
+
+export interface UserSolutionsResponse {
+  success: boolean
+  solutions: UserSolution[]
+  totalSolutions: number
+  problem?: Problem // Include problem info for context
 } 

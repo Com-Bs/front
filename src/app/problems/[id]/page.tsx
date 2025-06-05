@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { apiClient } from "@/lib/api"
-import type { CodeRunResult, Problem } from "@/lib/api-types"
+import type { CodeRunResult, Problem, UserSolution } from "@/lib/api-types"
 
 interface TestCase {
   id: number
@@ -27,7 +27,10 @@ export default function ProblemPage() {
   const problemId = params?.id as string
 
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(true)
+  const [isSolutionsPanelOpen, setIsSolutionsPanelOpen] = useState(false)
   const [currentProblem, setCurrentProblem] = useState<ProblemWithTestStatus | null>(null)
+  const [previousSolutions, setPreviousSolutions] = useState<UserSolution[]>([])
+  const [isLoadingSolutions, setIsLoadingSolutions] = useState(false)
   const [code, setCode] = useState("")
   const [isRunning, setIsRunning] = useState(false)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
@@ -83,7 +86,98 @@ export default function ProblemPage() {
       }
     }
 
+    const fetchSolutions = async () => {
+      if (!problemId) return
+      
+      try {
+        setIsLoadingSolutions(true)
+        
+        // Mock data for development - remove when API is ready
+        const mockSolutions: UserSolution[] = [
+          {
+            id: "1",
+            problemId: problemId,
+            userId: "user123",
+            code: `function solution(nums, target) {
+  // Two Sum solution
+  const map = new Map();
+  for (let i = 0; i < nums.length; i++) {
+    const complement = target - nums[i];
+    if (map.has(complement)) {
+      return [map.get(complement), i];
+    }
+    map.set(nums[i], i);
+  }
+  return [];
+}`,
+            status: "passed",
+            testResults: {
+              passed: 3,
+              total: 3
+            },
+            submittedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
+            executionTime: "2ms"
+          },
+          {
+            id: "2", 
+            problemId: problemId,
+            userId: "user123",
+            code: `function solution(nums, target) {
+  // Brute force attempt
+  for (let i = 0; i < nums.length; i++) {
+    for (let j = i + 1; j < nums.length; j++) {
+      if (nums[i] + nums[j] === target) {
+        return [i, j];
+      }
+    }
+  }
+  return [];
+}`,
+            status: "failed",
+            testResults: {
+              passed: 1,
+              total: 3
+            },
+            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
+            // No executionTime to test optional behavior
+          },
+          {
+            id: "3", 
+            problemId: problemId,
+            userId: "user123",
+            code: `function solution(nums, target) {
+  // Another attempt without timing
+  return nums.map((num, i) => i);
+}`,
+            status: "partial",
+            testResults: {
+              passed: 2,
+              total: 3
+            },
+            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
+            // No executionTime or testResults to test edge cases
+          }
+        ];
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setPreviousSolutions(mockSolutions);
+        
+        // Uncomment when API is ready:
+        // const data = await apiClient.getUserSolutions(problemId)
+        // if (data.success) {
+        //   setPreviousSolutions(data.solutions)
+        // }
+      } catch (error) {
+        console.error('Failed to fetch solutions:', error)
+        setPreviousSolutions([])
+      } finally {
+        setIsLoadingSolutions(false)
+      }
+    }
+
     fetchProblem()
+    fetchSolutions()
   }, [problemId])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -180,6 +274,28 @@ export default function ProblemPage() {
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "passed":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      case "failed":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+      case "partial":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   return (
@@ -305,6 +421,70 @@ export default function ProblemPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Previous Solutions Panel */}
+          <Collapsible open={isSolutionsPanelOpen} onOpenChange={setIsSolutionsPanelOpen}>
+            <CollapsibleTrigger asChild>
+              <div className="bg-[#DDBDD5]/20 dark:bg-[#59656F]/20 border-t border-[#DDBDD5]/30 p-3 cursor-pointer hover:bg-[#DDBDD5]/30 dark:hover:bg-[#59656F]/30">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-[#1D1E2C] dark:text-white">
+                    Previous Solutions ({previousSolutions.length})
+                  </h3>
+                  <ChevronRight className={`w-4 h-4 transition-transform ${isSolutionsPanelOpen ? "rotate-90" : ""}`} />
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="bg-white dark:bg-[#2A2B3D] p-4 max-h-48 lg:max-h-64 overflow-auto custom-scrollbar">
+                {isLoadingSolutions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#AC9FBB]"></div>
+                    <span className="ml-2 text-[#59656F] dark:text-[#DDBDD5] text-sm">Loading solutions...</span>
+                  </div>
+                ) : previousSolutions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-[#59656F] dark:text-[#DDBDD5] text-sm">No previous solutions found</p>
+                    <p className="text-xs text-[#59656F] dark:text-[#DDBDD5] mt-1">Submit your first solution to see it here!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {previousSolutions.map((solution, index) => (
+                      <div
+                        key={solution.id}
+                        className="border border-[#DDBDD5]/30 rounded-lg p-3 hover:bg-[#F7EBEC] dark:hover:bg-[#1D1E2C] transition-colors cursor-pointer"
+                        onClick={() => setCode(solution.code)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">
+                              Solution #{previousSolutions.length - index}
+                            </span>
+                            <div className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(solution.status)}`}>
+                              {solution.status}
+                            </div>
+                          </div>
+                          <span className="text-xs text-[#59656F] dark:text-[#DDBDD5]">
+                            {formatDate(solution.submittedAt)}
+                          </span>
+                        </div>
+                        
+                        {solution.testResults && (
+                          <div className="flex items-center gap-4 text-xs text-[#59656F] dark:text-[#DDBDD5]">
+                            <span>Tests: {solution.testResults.passed}/{solution.testResults.total}</span>
+                            {solution.executionTime && <span>Time: {solution.executionTime}</span>}
+                          </div>
+                        )}
+                        
+                        <div className="text-xs text-[#AC9FBB] mt-2 text-right">
+                          Click to load this solution
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CollapsibleContent>
           </Collapsible>

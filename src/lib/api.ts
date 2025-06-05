@@ -1,4 +1,4 @@
-import type { CodeRunResult, ProblemResponse } from './api-types'
+import type { CodeRunResult, ProblemResponse, UserSolutionsResponse } from './api-types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 
@@ -189,6 +189,13 @@ class ApiClient {
     return this.request<CodeRunResult>('/code/run', {
       method: 'POST',
       body: JSON.stringify({ code, problemId }),
+    })
+  }
+
+  // Get user's previous solutions for a problem
+  async getUserSolutions(problemId: string) {
+    return this.request<UserSolutionsResponse>(`/problems/${problemId}/solutions`, {
+      method: 'GET',
     })
   }
 
