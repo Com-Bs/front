@@ -261,10 +261,10 @@ ${userCode}
       const data = await apiClient.runCode(wrappedCode, problemId)
       setResults(data)
       
-      if (currentProblem) {
+      if (currentProblem && data.result) {
         const updatedTestCases = currentProblem.testCases.map((testCase, index) => ({
           ...testCase,
-          status: data.result[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
+          status: data.result && data.result[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
         }))
 
         setCurrentProblem({
@@ -599,6 +599,48 @@ ${userCode}
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#AC9FBB]"></div>
                   <span className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Running tests...</span>
+                </div>
+              ) : results?.result ? (
+                <div className="space-y-2">
+                  {/* Show compilation error if present */}
+                  {results.error && (
+                    <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-3 rounded mb-3">
+                      <p className="font-medium">Compilation Error:</p>
+                      <p className="text-sm mt-1">{results.error}</p>
+                      {results.line && results.column && (
+                        <p className="text-xs mt-1">Line: {results.line}, Column: {results.column}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="text-[#1D1E2C] dark:text-white font-medium text-sm mb-2">
+                    Test Results: {results.status === "Success" ? "All Passed ✓" : results.error ? "Compilation Failed" : "Some Failed ✗"}
+                  </div>
+                  {results.result.map((testResult, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-2 rounded text-sm ${
+                        testResult.status === "Success" 
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" 
+                          : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Test Case {index + 1}: {testResult.status}</span>
+                        {testResult.status === "Success" ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs">
+                        <span>Output: {testResult.output.join(", ")}</span>
+                        {testResult.status === "Failed" && testResult.expectedOutput.length > 0 && (
+                          <span className="ml-2">Expected: {testResult.expectedOutput.join(", ")}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : results?.error ? (
                 <div className="text-red-500 text-sm">

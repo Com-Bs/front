@@ -1,5 +1,5 @@
 export interface CodeRunResult {
-  result: Array<{
+  result?: Array<{
     status: "Success" | "Failed"
     output: number[]
     expectedOutput: number[]
