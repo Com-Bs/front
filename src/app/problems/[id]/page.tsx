@@ -90,82 +90,13 @@ export default function ProblemPage() {
       try {
         setIsLoadingSolutions(true)
         
-        // Mock data for development - remove when API is ready
-        const mockSolutions: UserSolution[] = [
-          {
-            id: "1",
-            problemId: problemId,
-            userId: "user123",
-            code: `function solution(nums, target) {
-  // Two Sum solution
-  const map = new Map();
-  for (let i = 0; i < nums.length; i++) {
-    const complement = target - nums[i];
-    if (map.has(complement)) {
-      return [map.get(complement), i];
-    }
-    map.set(nums[i], i);
-  }
-  return [];
-}`,
-            status: "passed",
-            testResults: {
-              passed: 3,
-              total: 3
-            },
-            submittedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
-            executionTime: "2ms"
-          },
-          {
-            id: "2", 
-            problemId: problemId,
-            userId: "user123",
-            code: `function solution(nums, target) {
-  // Brute force attempt
-  for (let i = 0; i < nums.length; i++) {
-    for (let j = i + 1; j < nums.length; j++) {
-      if (nums[i] + nums[j] === target) {
-        return [i, j];
-      }
-    }
-  }
-  return [];
-}`,
-            status: "failed",
-            testResults: {
-              passed: 1,
-              total: 3
-            },
-            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
-            // No executionTime to test optional behavior
-          },
-          {
-            id: "3", 
-            problemId: problemId,
-            userId: "user123",
-            code: `function solution(nums, target) {
-  // Another attempt without timing
-  return nums.map((num, i) => i);
-}`,
-            status: "partial",
-            testResults: {
-              passed: 2,
-              total: 3
-            },
-            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
-            // No executionTime or testResults to test edge cases
-          }
-        ];
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setPreviousSolutions(mockSolutions);
-        
-        // Uncomment when API is ready:
-        // const data = await apiClient.getUserSolutions(problemId)
-        // if (data.success) {
-        //   setPreviousSolutions(data.solutions)
-        // }
+        // Get user solutions from API
+        const data = await apiClient.getUserSolutions(problemId)
+        if (data.success) {
+          setPreviousSolutions(data.solutions || [])
+        } else {
+          setPreviousSolutions([])
+        }
       } catch (error) {
         console.error('Failed to fetch solutions:', error)
         setPreviousSolutions([])
@@ -251,6 +182,36 @@ ${userCode}
 }`
   }
 
+  // Helper function to unwrap function body from stored code
+  const unwrapFunctionBody = (wrappedCode: string, problem: Problem): string => {
+    if (!problem.function_name || !problem.arguments) {
+      return wrappedCode
+    }
+
+    const functionName = problem.function_name
+    const params = problem.arguments.map(arg => `${arg.type} ${arg.name}`).join(', ')
+    const expectedSignature = `int ${functionName}(${params}) {`
+    
+    // Check if the code starts with the expected function signature
+    if (wrappedCode.startsWith(expectedSignature)) {
+      // Remove the signature and closing brace, extract the body
+      const bodyStartIndex = expectedSignature.length
+      let body = wrappedCode.substring(bodyStartIndex)
+      
+      // Remove the last closing brace if it exists
+      const lastBraceIndex = body.lastIndexOf('}')
+      if (lastBraceIndex !== -1) {
+        body = body.substring(0, lastBraceIndex)
+      }
+      
+      // Clean up leading/trailing whitespace but preserve internal formatting
+      return body.trim()
+    }
+    
+    // If it doesn't match expected format, return as-is
+    return wrappedCode
+  }
+
   const handleRunCode = async () => {
     setIsRunning(true)
     setResults(null)
@@ -271,6 +232,18 @@ ${userCode}
           ...currentProblem,
           testCases: updatedTestCases,
         })
+      }
+
+      // Refresh previous solutions after compile
+      if (problemId) {
+        try {
+          const data = await apiClient.getUserSolutions(problemId)
+          if (data.success) {
+            setPreviousSolutions(data.solutions || [])
+          }
+        } catch (error) {
+          console.error('Failed to refresh solutions:', error)
+        }
       }
     } catch (error) {
       console.error('Failed to run code:', error)
@@ -471,7 +444,7 @@ ${userCode}
                       <div
                         key={solution.id}
                         className="border border-[#DDBDD5]/30 rounded-lg p-3 hover:bg-[#F7EBEC] dark:hover:bg-[#1D1E2C] transition-colors cursor-pointer"
-                        onClick={() => setCode(solution.code)}
+                        onClick={() => setCode(currentProblem ? unwrapFunctionBody(solution.code, currentProblem) : solution.code)}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
