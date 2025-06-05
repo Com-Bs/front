@@ -217,7 +217,7 @@ export default function ProblemPage() {
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Problem Description & Test Cases */}
-        <div className={`flex flex-col lg:border-r border-[#DDBDD5]/30 lg:w-1/2 ${
+        <div className={`flex flex-col lg:border-r border-[#DDBDD5]/30 lg:w-1/2 flex-1 ${
           mobileView === "code" ? "hidden lg:flex" : "flex"
         }`}>
           {/* Problem Description */}
@@ -319,11 +319,11 @@ export default function ProblemPage() {
           </div>
 
           {/* Code Editor */}
-          <div className="bg-[#1D1E2C] p-4 flex-[3] min-h-0">
+          <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 flex-[3] min-h-0">
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full bg-transparent text-white font-mono text-sm resize-none outline-none"
+              className="w-full h-full bg-transparent text-[#1D1E2C] dark:text-white font-mono text-sm resize-none outline-none"
               placeholder="// Start coding here..."
               style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
             />
