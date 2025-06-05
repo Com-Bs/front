@@ -1,0 +1,141 @@
+{
+  "users": {
+    "testUser": {
+      "id": "user123",
+      "email": "test@example.com",
+      "name": "testuser",
+      "password": "password123"
+    }
+  },
+  "problems": [
+    {
+      "id": "problem1",
+      "title": "Two Sum",
+      "difficulty": "Easy",
+      "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+      "hints": [
+        "Try using a hash map to store the complement of each number",
+        "The complement is target - nums[i]"
+      ],
+      "test_cases": [
+        {
+          "input": "[2,7,11,15], 9",
+          "output": "[0,1]"
+        },
+        {
+          "input": "[3,2,4], 6", 
+          "output": "[1,2]"
+        },
+        {
+          "input": "[3,3], 6",
+          "output": "[0,1]"
+        }
+      ],
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "userSolutions": [
+    {
+      "id": "solution1",
+      "problemId": "problem1",
+      "userId": "user123",
+      "code": "function solution(nums, target) {\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (map.has(complement)) {\n      return [map.get(complement), i];\n    }\n    map.set(nums[i], i);\n  }\n  return [];\n}",
+      "status": "passed",
+      "testResults": {
+        "passed": 3,
+        "total": 3
+      },
+      "submittedAt": "2025-01-01T12:00:00Z",
+      "executionTime": "2ms"
+    },
+    {
+      "id": "solution2",
+      "problemId": "problem1", 
+      "userId": "user123",
+      "code": "function solution(nums, target) {\n  for (let i = 0; i < nums.length; i++) {\n    for (let j = i + 1; j < nums.length; j++) {\n      if (nums[i] + nums[j] === target) {\n        return [i, j];\n      }\n    }\n  }\n  return [];\n}",
+      "status": "failed",
+      "testResults": {
+        "passed": 1,
+        "total": 3
+      },
+      "submittedAt": "2025-01-01T10:00:00Z"
+    }
+  ],
+  "apiResponses": {
+    "loginSuccess": {
+      "success": true,
+      "token": "mock-jwt-token-123",
+      "user": {
+        "id": "user123",
+        "email": "test@example.com",
+        "name": "testuser"
+      }
+    },
+    "loginError": {
+      "success": false,
+      "message": "Invalid credentials"
+    },
+    "signupSuccess": {
+      "success": true,
+      "user": {
+        "username": "testuser",
+        "email": "test@example.com"
+      },
+      "message": "Account created successfully"
+    },
+    "signupError": {
+      "success": false,
+      "message": "Email already exists"
+    },
+    "problemsResponse": {
+      "success": true,
+      "problems": [
+        {
+          "id": "problem1",
+          "title": "Two Sum",
+          "difficulty": "Easy",
+          "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+          "hints": [],
+          "test_cases": [],
+          "created_at": "2025-01-01T00:00:00Z",
+          "updated_at": "2025-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "solutionsResponse": {
+      "success": true,
+      "solutions": [
+        {
+          "id": "solution1",
+          "problemId": "problem1",
+          "userId": "user123", 
+          "code": "function solution(nums, target) {\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (map.has(complement)) {\n      return [map.get(complement), i];\n    }\n    map.set(nums[i], i);\n  }\n  return [];\n}",
+          "status": "passed",
+          "testResults": {
+            "passed": 3,
+            "total": 3
+          },
+          "submittedAt": "2025-01-01T12:00:00Z",
+          "executionTime": "2ms"
+        }
+      ],
+      "totalSolutions": 2
+    },
+    "codeRunSuccess": {
+      "success": true,
+      "results": [
+        {
+          "status": "Success",
+          "output": [0, 1],
+          "expected_output": [0, 1]
+        },
+        {
+          "status": "Success", 
+          "output": [1, 2],
+          "expected_output": [1, 2]
+        }
+      ]
+    }
+  }
+}
