@@ -96,7 +96,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
   return (
     <header className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 px-4 py-3">
       <div className="flex items-center justify-between">
-        <Link href="/">
+        <Link href="/app">
           <Logo size="sm" />
         </Link>
         

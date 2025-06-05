@@ -28,7 +28,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      await login(email, password)
+      await login(email.trim(), password)
       router.push("/app")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")

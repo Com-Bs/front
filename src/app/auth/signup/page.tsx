@@ -39,7 +39,7 @@ export default function SignupPage() {
     }
 
     try {
-      const response = await apiClient.signup(formData.name, formData.email, formData.password)
+      const response = await apiClient.signup(formData.name.trim(), formData.email.trim(), formData.password)
       
       if (response.success) {
         setSuccess("Account created successfully! Redirecting to login...")
