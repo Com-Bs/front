@@ -175,7 +175,7 @@ export default function ProblemPage() {
       <Navbar />
       
       {/* Breadcrumb */}
-      <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 px-4 py-2">
+      <div className="bg-white dark:bg-[#2A2B3D] px-4 py-2 lg:border-b lg:border-[#DDBDD5]/30">
         <div className="flex items-center gap-2">
           <Link href="/app">
             <Button variant="ghost" size="sm" className="flex items-center gap-1">
@@ -190,24 +190,24 @@ export default function ProblemPage() {
       </div>
 
       {/* Mobile Tab Switcher */}
-      <div className="lg:hidden bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30">
-        <div className="flex">
+      <div className="lg:hidden bg-white dark:bg-[#2A2B3D] px-2 pt-2 shadow-none -mt-px">
+        <div className="flex gap-1">
           <button
             onClick={() => setMobileView("problem")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 px-4 text-sm font-medium transition-all duration-200 rounded-t-lg relative ${
               mobileView === "problem"
-                ? "text-[#AC9FBB] border-b-2 border-[#AC9FBB] bg-[#F7EBEC] dark:bg-[#1D1E2C]"
-                : "text-[#59656F] dark:text-[#DDBDD5] hover:text-[#AC9FBB]"
+                ? "py-4 bg-white dark:bg-[#2A2B3D] text-[#1D1E2C] dark:text-white border-x border-t border-[#DDBDD5]/30 -mb-px z-10 shadow-[-4px_-2px_8px_-4px_rgba(0,0,0,0.15),4px_-2px_8px_-4px_rgba(0,0,0,0.15),0_-4px_8px_-4px_rgba(0,0,0,0.15)]"
+                : "py-3 bg-[#DDBDD5]/30 dark:bg-[#59656F]/30 text-[#59656F] dark:text-[#DDBDD5] hover:bg-[#DDBDD5]/50 dark:hover:bg-[#59656F]/50 border-x border-t border-[#DDBDD5]/20 mt-1"
             }`}
           >
             Problem
           </button>
           <button
             onClick={() => setMobileView("code")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 px-4 text-sm font-medium transition-all duration-200 rounded-t-lg relative ${
               mobileView === "code"
-                ? "text-[#AC9FBB] border-b-2 border-[#AC9FBB] bg-[#F7EBEC] dark:bg-[#1D1E2C]"
-                : "text-[#59656F] dark:text-[#DDBDD5] hover:text-[#AC9FBB]"
+                ? "py-4 bg-white dark:bg-[#2A2B3D] text-[#1D1E2C] dark:text-white border-x border-t border-[#DDBDD5]/30 -mb-px z-10 shadow-[-4px_-2px_8px_-4px_rgba(0,0,0,0.15),4px_-2px_8px_-4px_rgba(0,0,0,0.15),0_-4px_8px_-4px_rgba(0,0,0,0.15)]"
+                : "py-3 bg-[#DDBDD5]/30 dark:bg-[#59656F]/30 text-[#59656F] dark:text-[#DDBDD5] hover:bg-[#DDBDD5]/50 dark:hover:bg-[#59656F]/50 border-x border-t border-[#DDBDD5]/20 mt-1"
             }`}
           >
             Code
