@@ -1,3 +1,5 @@
+import type { CodeRunResult, ProblemResponse } from './api-types'
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 // Event listener for logout
@@ -98,6 +100,14 @@ class ApiClient {
     return response.json()
   }
 
+  private capitalizeFirstLetter(str: string): "Easy" | "Medium" | "Hard" {
+    const capitalized = str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+    if (capitalized === "Easy" || capitalized === "Medium" || capitalized === "Hard") {
+      return capitalized
+    }
+    return "Easy" // fallback to Easy if the value doesn't match
+  }
+
   // Auth endpoints
   async login(email: string, password: string) {
     const response = await this.request<{ 
@@ -136,7 +146,7 @@ class ApiClient {
 
   // Problem endpoints
   async getProblems() {
-    return this.request<{
+    const response = await this.request<{
       success: boolean
       problems: Array<{
         id: string
@@ -151,42 +161,34 @@ class ApiClient {
     }>('/problems', {
       method: 'GET',
     })
+
+    if (response.success) {
+      response.problems = response.problems.map(problem => ({
+        ...problem,
+        difficulty: this.capitalizeFirstLetter(problem.difficulty)
+      }))
+    }
+
+    return response
   }
 
   async getProblem(id: string) {
-    return this.request<{
-      success: boolean
-      problem: {
-        id: string
-        title: string
-        difficulty: string
-        description: string
-        hints: string[]
-        test_cases: Array<{ input: string; output: string }>
-        created_at: string
-        updated_at: string
-      }
-    }>(`/problems/${id}`, {
+    const response = await this.request<ProblemResponse>(`/problems/${id}`, {
       method: 'GET',
     })
+
+    if (response.success) {
+      response.problem.difficulty = this.capitalizeFirstLetter(response.problem.difficulty)
+    }
+
+    return response
   }
 
   // Code execution endpoint
-  async runCode(code: string, language: string, problemId?: string) {
-    return this.request<{
-      success: boolean
-      results: Array<{
-        testCaseId: number
-        status: string
-        output: string
-        executionTime: string
-      }>
-      allTestsPassed: boolean
-      totalExecutionTime: string
-      memoryUsage: string
-    }>('/code/run', {
+  async runCode(code: string, problemId?: string) {
+    return this.request<CodeRunResult>('/code/run', {
       method: 'POST',
-      body: JSON.stringify({ code, language, problemId }),
+      body: JSON.stringify({ code, problemId }),
     })
   }
 

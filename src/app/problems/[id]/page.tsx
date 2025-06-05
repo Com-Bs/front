@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { apiClient } from "@/lib/api"
+import type { CodeRunResult, Problem } from "@/lib/api-types"
 
 interface TestCase {
   id: number
@@ -17,22 +18,8 @@ interface TestCase {
   status: "pending" | "passed" | "failed"
 }
 
-interface Problem {
-  id: string // Changed from number to string for MongoDB ObjectID
-  title: string
-  difficulty: "Easy" | "Medium" | "Hard"
-  description: string
-  examples: Array<{
-    input: string
-    output: string
-    explanation?: string
-  }>
+interface ProblemWithTestStatus extends Problem {
   testCases: TestCase[]
-  starterCode?: {
-    javascript?: string
-    python?: string
-    java?: string
-  }
 }
 
 export default function ProblemPage() {
@@ -40,13 +27,14 @@ export default function ProblemPage() {
   const problemId = params?.id as string
 
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(true)
-  const [currentProblem, setCurrentProblem] = useState<Problem | null>(null)
+  const [currentProblem, setCurrentProblem] = useState<ProblemWithTestStatus | null>(null)
   const [code, setCode] = useState("")
   const [isRunning, setIsRunning] = useState(false)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
   const [outputHeight, setOutputHeight] = useState(30) // percentage of right panel
   const [isResizingVertical, setIsResizingVertical] = useState(false)
+  const [results, setResults] = useState<CodeRunResult["results"] | null>(null)
   
   const containerRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
@@ -60,24 +48,17 @@ export default function ProblemPage() {
         const data = await apiClient.getProblem(problemId)
         
         if (data.success && data.problem) {
-          const transformedProblem: Problem = {
-            id: data.problem.id, // Keep as string for MongoDB ObjectID
-            title: data.problem.title,
-            difficulty: data.problem.difficulty as "Easy" | "Medium" | "Hard",
-            description: data.problem.description,
-            testCases: data.problem.test_cases.map((tc: { input: string; output: string }, index: number) => ({
+          const problemWithTests: ProblemWithTestStatus = {
+            ...data.problem,
+            difficulty: data.problem.difficulty.charAt(0).toUpperCase() + data.problem.difficulty.slice(1).toLowerCase() as "Easy" | "Medium" | "Hard",
+            testCases: data.problem.test_cases.map((tc, index) => ({
               id: index + 1,
               input: tc.input,
               expectedOutput: tc.output,
               status: "pending"
-            })),
-            examples: data.problem.test_cases.slice(0, 2).map((tc: { input: string; output: string }) => ({
-              input: tc.input,
-              output: tc.output
             }))
           }
-          setCurrentProblem(transformedProblem)
-          // Set default code
+          setCurrentProblem(problemWithTests)
           setCode(`function solution() {
     // Write your solution here
     
@@ -85,7 +66,6 @@ export default function ProblemPage() {
         }
       } catch (error) {
         console.error('Failed to fetch problem:', error)
-        // No fallback - let the user see the error
         setCurrentProblem(null)
       }
     }
@@ -152,15 +132,16 @@ export default function ProblemPage() {
 
   const handleRunCode = async () => {
     setIsRunning(true)
+    setResults(null)
 
     try {
-      const data = await apiClient.runCode(code, 'javascript', problemId)
+      const data = await apiClient.runCode(code, problemId)
+      setResults(data.results)
       
-      if (data.success && currentProblem) {
-        // Update test cases with results
+      if (currentProblem) {
         const updatedTestCases = currentProblem.testCases.map((testCase, index) => ({
           ...testCase,
-          status: data.results?.[index]?.status === "passed" ? "passed" : "failed" as "passed" | "failed",
+          status: data.results[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
         }))
 
         setCurrentProblem({
@@ -170,7 +151,6 @@ export default function ProblemPage() {
       }
     } catch (error) {
       console.error('Failed to run code:', error)
-      // No fallback - show actual error to user
     }
 
     setIsRunning(false)
@@ -208,12 +188,9 @@ export default function ProblemPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-        {/* Left Panel - Problem Description & Test Cases */}
-        <div 
-          className="flex flex-col border-r border-[#DDBDD5]/30"
-          style={{ width: `${leftWidth}%` }}
-        >
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Problem Description & Test Cases */}
+        <div className="flex flex-col lg:border-r border-[#DDBDD5]/30 lg:w-1/2">
           {/* Problem Description */}
           <div className="flex-1 overflow-auto p-6 bg-white dark:bg-[#2A2B3D]">
             {currentProblem ? (
@@ -229,23 +206,17 @@ export default function ProblemPage() {
 
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-[#1D1E2C] dark:text-white">Examples</h3>
-                  {currentProblem.examples.map((example, index) => (
+                  {currentProblem.test_cases.slice(0, 2).map((tc, index) => (
                     <div key={index} className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded-lg p-4">
                       <div className="space-y-2">
                         <div>
                           <span className="font-medium text-[#1D1E2C] dark:text-white">Input: </span>
-                          <code className="text-[#AC9FBB]">{example.input}</code>
+                          <code className="text-[#AC9FBB]">{tc.input}</code>
                         </div>
                         <div>
                           <span className="font-medium text-[#1D1E2C] dark:text-white">Output: </span>
-                          <code className="text-[#AC9FBB]">{example.output}</code>
+                          <code className="text-[#AC9FBB]">{tc.output}</code>
                         </div>
-                        {example.explanation && (
-                          <div>
-                            <span className="font-medium text-[#1D1E2C] dark:text-white">Explanation: </span>
-                            <span className="text-[#59656F] dark:text-[#DDBDD5]">{example.explanation}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -297,25 +268,13 @@ export default function ProblemPage() {
           </Collapsible>
         </div>
 
-        {/* Resizable Divider */}
-        <div 
-          className="w-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-col-resize transition-colors duration-150 flex items-center justify-center group"
-          onMouseDown={handleMouseDown}
-        >
-          <div className="w-0.5 h-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
-        </div>
-
-        {/* Right Panel - Code Editor */}
-        <div 
-          className="flex flex-col"
-          style={{ width: `${100 - leftWidth}%` }}
-          ref={rightPanelRef}
-        >
+        {/* Code Editor Panel */}
+        <div className="flex flex-col lg:w-1/2">
           {/* Editor Header */}
           <div className="bg-white dark:bg-[#2A2B3D] border-b border-[#DDBDD5]/30 p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">JavaScript</span>
+                <span className="text-sm font-medium text-[#1D1E2C] dark:text-white">C - </span>
               </div>
               <Button
                 onClick={handleRunCode}
@@ -329,10 +288,7 @@ export default function ProblemPage() {
           </div>
 
           {/* Code Editor */}
-          <div 
-            className="bg-[#1D1E2C] p-4"
-            style={{ height: `${100 - outputHeight}%` }}
-          >
+          <div className="bg-[#1D1E2C] p-4 flex-1 min-h-0">
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -342,25 +298,23 @@ export default function ProblemPage() {
             />
           </div>
 
-          {/* Horizontal Resizable Divider */}
-          <div 
-            className="h-1 bg-[#DDBDD5]/30 hover:bg-[#AC9FBB]/50 cursor-row-resize transition-colors duration-150 flex items-center justify-center group"
-            onMouseDown={handleVerticalMouseDown}
-          >
-            <div className="h-0.5 w-8 bg-[#DDBDD5] group-hover:bg-[#AC9FBB] transition-colors duration-150 rounded-full"></div>
-          </div>
-
           {/* Output Panel */}
-          <div 
-            className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col"
-            style={{ height: `${outputHeight}%` }}
-          >
+          <div className="bg-white dark:bg-[#2A2B3D] p-4 flex flex-col h-48 border-t border-[#DDBDD5]/30">
             <h4 className="font-medium text-[#1D1E2C] dark:text-white mb-2">Output</h4>
             <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] rounded p-3 flex-1 overflow-auto">
               {isRunning ? (
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#AC9FBB]"></div>
                   <span className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Running tests...</span>
+                </div>
+              ) : results?.some(r => r.error) ? (
+                <div className="text-red-500 text-sm">
+                  {results.find(r => r.error)?.error && (
+                    <>
+                      <p>Error: {results.find(r => r.error)?.error?.message}</p>
+                      <p>Line: {results.find(r => r.error)?.error?.line}, Column: {results.find(r => r.error)?.error?.column}</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Click &quot;Run Code&quot; to see results</div>

@@ -1,136 +1,148 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Navbar } from "@/components/navbar"
-import { Search, Filter, ArrowUpDown } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Navbar } from "@/components/navbar";
+import { Search, Filter, ArrowUpDown } from "lucide-react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { apiClient } from "@/lib/api"
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { apiClient } from "@/lib/api";
 
 interface Problem {
-  id: string // MongoDB ObjectID
-  displayId: number // Sequential number for display
-  title: string
-  difficulty: "Easy" | "Medium" | "Hard"
-  tags: string[]
-  solvedCount: number
-  acceptanceRate: string
+  id: string; // MongoDB ObjectID
+  displayId: number; // Sequential number for display
+  title: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  tags: string[];
 }
 
 export default function ProblemsPage() {
-  const [problems, setProblems] = useState<Problem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [difficultyFilter, setDifficultyFilter] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState("id")
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState("id");
 
   // Fetch problems from API
   useEffect(() => {
     const fetchProblems = async () => {
       try {
-        const data = await apiClient.getProblems()
-        
+        const data = await apiClient.getProblems();
+
         if (data.success && data.problems) {
           // Transform backend data to match frontend interface
-          const transformedProblems: Problem[] = data.problems.map((problem: {
-            id: string
-            title: string
-            difficulty: string
-          }, index: number) => ({
-            id: problem.id, // Keep MongoDB ObjectID for API calls
-            displayId: index + 1, // Sequential number for display
-            title: problem.title || "Untitled Problem",
-            difficulty: (problem.difficulty as "Easy" | "Medium" | "Hard") || "Easy",
-            tags: [], // Backend doesn't have tags yet, set empty array
-            solvedCount: 0, // Backend doesn't have solved count yet
-            acceptanceRate: "0%", // Backend doesn't have acceptance rate yet
-          }))
-          
-          setProblems(transformedProblems)
+          const transformedProblems: Problem[] = data.problems.map(
+            (
+              problem: {
+                id: string;
+                title: string;
+                difficulty: string;
+              },
+              index: number
+            ) => ({
+              id: problem.id, // Keep MongoDB ObjectID for API calls
+              displayId: index + 1, // Sequential number for display
+              title: problem.title || "Untitled Problem",
+              difficulty:
+                (problem.difficulty as "Easy" | "Medium" | "Hard") || "Easy",
+              tags: [], // Backend doesn't have tags yet, set empty array
+            })
+          );
+
+          setProblems(transformedProblems);
         }
       } catch (error) {
-        console.error('Failed to fetch problems:', error)
+        console.error("Failed to fetch problems:", error);
         // No fallback - let user see the error
-        setProblems([])
+        setProblems([]);
       }
-      
-      setIsLoading(false)
-    }
 
-    fetchProblems()
-  }, [])
+      setIsLoading(false);
+    };
+
+    fetchProblems();
+  }, []);
 
   // Filter and sort problems
   const filteredProblems = problems
     .filter((problem) => {
       // Apply search filter
-      if (searchQuery && !problem.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false
+      if (
+        searchQuery &&
+        !problem.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
+        return false;
       }
 
       // Apply difficulty filter
-      if (difficultyFilter.length > 0 && !difficultyFilter.includes(problem.difficulty)) {
-        return false
+      if (
+        difficultyFilter.length > 0 &&
+        !difficultyFilter.includes(problem.difficulty)
+      ) {
+        return false;
       }
 
-      return true
+      return true;
     })
     .sort((a, b) => {
       // Apply sorting
       switch (sortBy) {
         case "title":
-          return a.title.localeCompare(b.title)
+          return a.title.localeCompare(b.title);
         case "difficulty":
-          const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 }
-          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]
-        case "acceptance":
-          return Number.parseInt(a.acceptanceRate) - Number.parseInt(b.acceptanceRate)
-        case "solved":
-          return b.solvedCount - a.solvedCount
+          const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
+          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
         default:
-          return a.displayId - b.displayId
+          return a.displayId - b.displayId;
       }
-    })
+    });
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "Easy":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "Medium":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "Hard":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   const toggleDifficultyFilter = (difficulty: string) => {
     if (difficultyFilter.includes(difficulty)) {
-      setDifficultyFilter(difficultyFilter.filter((d) => d !== difficulty))
+      setDifficultyFilter(difficultyFilter.filter((d) => d !== difficulty));
     } else {
-      setDifficultyFilter([...difficultyFilter, difficulty])
+      setDifficultyFilter([...difficultyFilter, difficulty]);
     }
-  }
+  };
 
   return (
-    <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col">
+    <div className="bg-[#F7EBEC] dark:bg-[#1D1E2C] flex flex-col h-screen overflow-hidden">
       <Navbar />
 
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 flex flex-col overflow-hidden">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#1D1E2C] dark:text-white mb-2">Problems</h1>
+          <h1 className="text-3xl font-bold text-[#1D1E2C] dark:text-white mb-2">
+            Problems
+          </h1>
           <p className="text-[#59656F] dark:text-[#DDBDD5]">
-            Choose a problem to solve and improve your coding skills! 🚀
+            Choose a problem to solve and improve your coding skills!
           </p>
         </div>
 
@@ -180,7 +192,9 @@ export default function ProblemsPage() {
                   onCheckedChange={() => toggleDifficultyFilter("Hard")}
                 >
                   <span className="flex items-center">
-                    <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 mr-2">Hard</Badge>
+                    <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 mr-2">
+                      Hard
+                    </Badge>
                   </span>
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
@@ -197,43 +211,49 @@ export default function ProblemsPage() {
                 <SelectItem value="id">Problem Number</SelectItem>
                 <SelectItem value="title">Problem Title</SelectItem>
                 <SelectItem value="difficulty">Difficulty</SelectItem>
-                <SelectItem value="acceptance">Acceptance Rate</SelectItem>
-                <SelectItem value="solved">Most Solved</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         {/* Problems Table */}
-        <div className="bg-white dark:bg-[#2A2B3D] rounded-lg shadow overflow-hidden">
-          <div className="min-w-full divide-y divide-[#DDBDD5]/30">
-            <div className="bg-[#DDBDD5]/20 dark:bg-[#59656F]/20">
-              <div className="grid grid-cols-12 px-6 py-3 text-left text-xs font-medium text-[#59656F] dark:text-[#DDBDD5] uppercase tracking-wider">
-                <div className="col-span-1">#</div>
-                <div className="col-span-5">Title</div>
-                <div className="col-span-2">Difficulty</div>
-                <div className="col-span-2">Acceptance</div>
-                <div className="col-span-2">Solved By</div>
-              </div>
+        <div className="bg-white dark:bg-[#2A2B3D] rounded-lg shadow overflow-hidden flex-1 flex flex-col">
+          {/* Table Header - Fixed */}
+          <div className="bg-[#DDBDD5]/20 dark:bg-[#59656F]/20 border-b border-[#DDBDD5]/30">
+            <div className="grid grid-cols-12 px-6 py-3 text-left text-xs font-medium text-[#59656F] dark:text-[#DDBDD5] uppercase tracking-wider">
+              <div className="col-span-1">#</div>
+              <div className="col-span-7">Title</div>
+              <div className="col-span-2">Difficulty</div>
             </div>
+          </div>
 
+          {/* Table Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="bg-white dark:bg-[#2A2B3D] divide-y divide-[#DDBDD5]/30">
               {isLoading ? (
                 <div className="px-6 py-12 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#AC9FBB] mx-auto mb-4"></div>
-                  <p className="text-[#59656F] dark:text-[#DDBDD5]">Loading problems...</p>
+                  <p className="text-[#59656F] dark:text-[#DDBDD5]">
+                    Loading problems...
+                  </p>
                 </div>
               ) : filteredProblems.length === 0 ? (
                 <div className="px-6 py-12 text-center">
-                  <p className="text-[#59656F] dark:text-[#DDBDD5]">No problems found matching your filters.</p>
+                  <p className="text-[#59656F] dark:text-[#DDBDD5]">
+                    No problems found matching your filters.
+                  </p>
                 </div>
               ) : (
                 filteredProblems.map((problem) => (
                   <Link key={problem.id} href={`/problems/${problem.id}`}>
                     <div className="grid grid-cols-12 px-6 py-4 hover:bg-[#F7EBEC] dark:hover:bg-[#1D1E2C] cursor-pointer transition-colors">
-                      <div className="col-span-1 font-medium text-[#1D1E2C] dark:text-white">{problem.displayId}</div>
-                      <div className="col-span-5">
-                        <div className="font-medium text-[#1D1E2C] dark:text-white">{problem.title}</div>
+                      <div className="col-span-1 font-medium text-[#1D1E2C] dark:text-white">
+                        {problem.displayId}
+                      </div>
+                      <div className="col-span-7">
+                        <div className="font-medium text-[#1D1E2C] dark:text-white">
+                          {problem.title}
+                        </div>
                         <div className="mt-1 flex flex-wrap gap-1">
                           {problem.tags.map((tag) => (
                             <span
@@ -246,11 +266,11 @@ export default function ProblemsPage() {
                         </div>
                       </div>
                       <div className="col-span-2">
-                        <Badge className={getDifficultyColor(problem.difficulty)}>{problem.difficulty}</Badge>
-                      </div>
-                      <div className="col-span-2 text-[#59656F] dark:text-[#DDBDD5]">{problem.acceptanceRate}</div>
-                      <div className="col-span-2 text-[#59656F] dark:text-[#DDBDD5]">
-                        {problem.solvedCount.toLocaleString()}
+                        <Badge
+                          className={getDifficultyColor(problem.difficulty)}
+                        >
+                          {problem.difficulty}
+                        </Badge>
                       </div>
                     </div>
                   </Link>
@@ -262,14 +282,16 @@ export default function ProblemsPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-[#2A2B3D] border-t border-[#DDBDD5]/30 px-4 py-4 mt-auto">
+      <footer className="bg-white dark:bg-[#2A2B3D] border-t border-[#DDBDD5]/30 px-4 py-4">
         <div className="container mx-auto flex items-center justify-between">
           <p className="text-sm text-[#59656F] dark:text-[#DDBDD5]">
-          © 2025 Compilo by ComπBs.
+            © 2025 Compilo by ComπBs.
           </p>
-          <div className="text-sm text-[#59656F] dark:text-[#DDBDD5]">{filteredProblems.length} problems available</div>
+          <div className="text-sm text-[#59656F] dark:text-[#DDBDD5]">
+            {filteredProblems.length} problems available
+          </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }

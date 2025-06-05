@@ -137,4 +137,36 @@
   .dark .landing-gradient {
     background: linear-gradient(135deg, #1D1E2C 0%, #2A2B3D 50%, #59656F 100%);
   }
+  
+  /* Custom pinkish scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #F7EBEC;
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #DDBDD5, #AC9FBB);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #AC9FBB, #59656F);
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #2A2B3D;
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #59656F, #AC9FBB);
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #AC9FBB, #DDBDD5);
+  }
 }
