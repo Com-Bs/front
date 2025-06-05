@@ -4,10 +4,10 @@ const API_BASE_URL = process.env.BACKEND_API_URL || 'https://localhost:8443'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     
     // Get auth token from request headers
     const authHeader = request.headers.get('authorization')
@@ -34,8 +34,9 @@ export async function GET(
 
     // Parse response as JSON regardless of status
     let data
+    let responseText
     try {
-      const responseText = await backendResponse.text()
+      responseText = await backendResponse.text()
       console.log('Backend raw response:', responseText)
       data = JSON.parse(responseText)
       console.log('Backend parsed response:', data)
