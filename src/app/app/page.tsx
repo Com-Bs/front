@@ -137,13 +137,23 @@ export default function ProblemsPage() {
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 flex flex-col overflow-hidden">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#1D1E2C] dark:text-white mb-2">
-            Problems
-          </h1>
-          <p className="text-[#59656F] dark:text-[#DDBDD5]">
-            Choose a problem to solve and improve your coding skills!
-          </p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-[#1D1E2C] dark:text-white mb-2">
+              Problems
+            </h1>
+            <p className="text-[#59656F] dark:text-[#DDBDD5]">
+              Choose a problem to solve and improve your coding skills!
+            </p>
+          </div>
+          <Link href="/stats">
+            <Button
+              variant="outline"
+              className="border-[#DDBDD5]/50 hover:bg-[#DDBDD5]/20"
+            >
+              View Stats
+            </Button>
+          </Link>
         </div>
 
         {/* Filters and Search */}

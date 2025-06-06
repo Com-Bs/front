@@ -128,14 +128,21 @@ class ApiClient {
   }
 
   async signup(username: string, email: string, password: string) {
-    return this.request<{ 
+    const response = await this.request<{ 
       success: boolean
-      user: { username: string; email: string }
-      message: string 
+      token: string
+      user: { id: number; email: string; name: string }
+      message?: string
     }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({ username, email, password }),
     })
+
+    if (response.success && response.token) {
+      this.setStoredToken(response.token)
+    }
+
+    return response
   }
 
   logout() {
@@ -218,6 +225,12 @@ class ApiClient {
   // Get user's previous solutions for a problem
   async getUserSolutions(problemId: string) {
     return this.request<UserSolutionsResponse>(`/problems/${problemId}/solutions`, {
+      method: 'GET',
+    })
+  }
+
+  async getAllUserSolutions() {
+    return this.request<UserSolutionsResponse>(`/allsolutions`, {
       method: 'GET',
     })
   }
