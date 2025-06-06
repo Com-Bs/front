@@ -63,7 +63,7 @@ export default function LoginPage() {
                   htmlFor="email"
                   className="text-[#1D1E2C] dark:text-white"
                 >
-                  Email
+                  Username
                 </Label>
                 <Input
                   id="email"
