@@ -37,7 +37,7 @@ export default function ProblemPage() {
   const [isResizing, setIsResizing] = useState(false)
   const [outputHeight, setOutputHeight] = useState(30) // percentage of right panel
   const [isResizingVertical, setIsResizingVertical] = useState(false)
-  const [results, setResults] = useState<CodeRunResult["results"] | null>(null)
+  const [results, setResults] = useState<CodeRunResult | null>(null)
   const [mobileView, setMobileView] = useState<"problem" | "code">("problem")
   const [isDesktop, setIsDesktop] = useState(false)
   
@@ -75,10 +75,8 @@ export default function ProblemPage() {
             }))
           }
           setCurrentProblem(problemWithTests)
-          setCode(`function solution() {
-    // Write your solution here
-    
-}`)
+          setCode(`    /* Write your solution here */
+    `)
         }
       } catch (error) {
         console.error('Failed to fetch problem:', error)
@@ -92,82 +90,13 @@ export default function ProblemPage() {
       try {
         setIsLoadingSolutions(true)
         
-        // Mock data for development - remove when API is ready
-        const mockSolutions: UserSolution[] = [
-          {
-            id: "1",
-            problemId: problemId,
-            userId: "user123",
-            code: `function solution(nums, target) {
-  // Two Sum solution
-  const map = new Map();
-  for (let i = 0; i < nums.length; i++) {
-    const complement = target - nums[i];
-    if (map.has(complement)) {
-      return [map.get(complement), i];
-    }
-    map.set(nums[i], i);
-  }
-  return [];
-}`,
-            status: "passed",
-            testResults: {
-              passed: 3,
-              total: 3
-            },
-            submittedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
-            executionTime: "2ms"
-          },
-          {
-            id: "2", 
-            problemId: problemId,
-            userId: "user123",
-            code: `function solution(nums, target) {
-  // Brute force attempt
-  for (let i = 0; i < nums.length; i++) {
-    for (let j = i + 1; j < nums.length; j++) {
-      if (nums[i] + nums[j] === target) {
-        return [i, j];
-      }
-    }
-  }
-  return [];
-}`,
-            status: "failed",
-            testResults: {
-              passed: 1,
-              total: 3
-            },
-            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
-            // No executionTime to test optional behavior
-          },
-          {
-            id: "3", 
-            problemId: problemId,
-            userId: "user123",
-            code: `function solution(nums, target) {
-  // Another attempt without timing
-  return nums.map((num, i) => i);
-}`,
-            status: "partial",
-            testResults: {
-              passed: 2,
-              total: 3
-            },
-            submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
-            // No executionTime or testResults to test edge cases
-          }
-        ];
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setPreviousSolutions(mockSolutions);
-        
-        // Uncomment when API is ready:
-        // const data = await apiClient.getUserSolutions(problemId)
-        // if (data.success) {
-        //   setPreviousSolutions(data.solutions)
-        // }
+        // Get user solutions from API
+        const data = await apiClient.getUserSolutions(problemId)
+        if (data.success) {
+          setPreviousSolutions(data.solutions || [])
+        } else {
+          setPreviousSolutions([])
+        }
       } catch (error) {
         console.error('Failed to fetch solutions:', error)
         setPreviousSolutions([])
@@ -237,24 +166,84 @@ export default function ProblemPage() {
     }
   }, [isResizing, isResizingVertical, handleMouseMove, handleMouseUp])
 
+  // Helper function to wrap user code with function signature
+  const wrapCodeWithSignature = (userCode: string, problem: Problem): string => {
+    if (!problem.function_name || !problem.arguments) {
+      // If no function signature provided, return user code as-is
+      return userCode
+    }
+
+    const functionName = problem.function_name
+    const params = problem.arguments.map(arg => `${arg.type} ${arg.name}`).join(', ')
+    
+    // Wrap user code in the required function signature (C minus always returns int)
+    return `int ${functionName}(${params}) {
+${userCode}
+}`
+  }
+
+  // Helper function to unwrap function body from stored code
+  const unwrapFunctionBody = (wrappedCode: string, problem: Problem): string => {
+    if (!problem.function_name || !problem.arguments) {
+      return wrappedCode
+    }
+
+    const functionName = problem.function_name
+    const params = problem.arguments.map(arg => `${arg.type} ${arg.name}`).join(', ')
+    const expectedSignature = `int ${functionName}(${params}) {`
+    
+    // Check if the code starts with the expected function signature
+    if (wrappedCode.startsWith(expectedSignature)) {
+      // Remove the signature and closing brace, extract the body
+      const bodyStartIndex = expectedSignature.length
+      let body = wrappedCode.substring(bodyStartIndex)
+      
+      // Remove the last closing brace if it exists
+      const lastBraceIndex = body.lastIndexOf('}')
+      if (lastBraceIndex !== -1) {
+        body = body.substring(0, lastBraceIndex)
+      }
+      
+      // Clean up leading/trailing whitespace but preserve internal formatting
+      return body.trim()
+    }
+    
+    // If it doesn't match expected format, return as-is
+    return wrappedCode
+  }
+
   const handleRunCode = async () => {
     setIsRunning(true)
     setResults(null)
 
     try {
-      const data = await apiClient.runCode(code, problemId)
-      setResults(data.results)
+      // Wrap user code with function signature if available
+      const wrappedCode = currentProblem ? wrapCodeWithSignature(code, currentProblem) : code
+      const data = await apiClient.runCode(wrappedCode, problemId)
+      setResults(data)
       
-      if (currentProblem) {
+      if (currentProblem && data.result) {
         const updatedTestCases = currentProblem.testCases.map((testCase, index) => ({
           ...testCase,
-          status: data.results[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
+          status: data.result && data.result[index]?.status === "Success" ? "passed" : "failed" as "passed" | "failed",
         }))
 
         setCurrentProblem({
           ...currentProblem,
           testCases: updatedTestCases,
         })
+      }
+
+      // Refresh previous solutions after compile
+      if (problemId) {
+        try {
+          const data = await apiClient.getUserSolutions(problemId)
+          if (data.success) {
+            setPreviousSolutions(data.solutions || [])
+          }
+        } catch (error) {
+          console.error('Failed to refresh solutions:', error)
+        }
       }
     } catch (error) {
       console.error('Failed to run code:', error)
@@ -455,7 +444,7 @@ export default function ProblemPage() {
                       <div
                         key={solution.id}
                         className="border border-[#DDBDD5]/30 rounded-lg p-3 hover:bg-[#F7EBEC] dark:hover:bg-[#1D1E2C] transition-colors cursor-pointer"
-                        onClick={() => setCode(solution.code)}
+                        onClick={() => setCode(currentProblem ? unwrapFunctionBody(solution.code, currentProblem) : solution.code)}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -523,16 +512,45 @@ export default function ProblemPage() {
 
           {/* Code Editor */}
           <div 
-            className={`bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 ${isDesktop ? '' : 'flex-[3]'} min-h-0`}
+            className={`bg-[#F7EBEC] dark:bg-[#1D1E2C] p-4 ${isDesktop ? '' : 'flex-[3]'} min-h-0 flex flex-col`}
             style={{ height: isDesktop ? `${100 - outputHeight}%` : undefined }}
           >
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full bg-transparent text-[#1D1E2C] dark:text-white font-mono text-sm resize-none outline-none"
-              placeholder="// Start coding here..."
-              style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
-            />
+            {/* Function Signature (Read-only) */}
+            {currentProblem?.function_name && currentProblem?.arguments && (
+              <div className="mb-2">
+                <div className="text-xs text-[#59656F] dark:text-[#DDBDD5] mb-1">Function Signature (read-only):</div>
+                <div 
+                  className="bg-[#DDBDD5]/20 border border-[#DDBDD5]/30 rounded p-2 text-[#1D1E2C] dark:text-white font-mono text-sm"
+                  style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
+                >
+                  {`int ${currentProblem.function_name}(${currentProblem.arguments.map(arg => `${arg.type} ${arg.name}`).join(', ')}) {`}
+                </div>
+              </div>
+            )}
+            
+            {/* Function Body Editor */}
+            <div className="flex-1 flex flex-col">
+              {currentProblem?.function_name && (
+                <div className="text-xs text-[#59656F] dark:text-[#DDBDD5] mb-1">Function Body:</div>
+              )}
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="flex-1 w-full bg-transparent text-[#1D1E2C] dark:text-white font-mono text-sm resize-none outline-none"
+                placeholder={currentProblem?.function_name ? "    // Write your function body here..." : "// Start coding here..."}
+                style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
+              />
+            </div>
+            
+            {/* Closing Brace (Read-only) */}
+            {currentProblem?.function_name && currentProblem?.arguments && (
+              <div 
+                className="bg-[#DDBDD5]/20 border border-[#DDBDD5]/30 rounded p-2 text-[#1D1E2C] dark:text-white font-mono text-sm mt-2"
+                style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
+              >
+                {`}`}
+              </div>
+            )}
           </div>
 
           {/* Horizontal Resizer - Desktop Only */}
@@ -555,13 +573,53 @@ export default function ProblemPage() {
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#AC9FBB]"></div>
                   <span className="text-[#59656F] dark:text-[#DDBDD5] text-sm">Running tests...</span>
                 </div>
-              ) : results?.some(r => r.error) ? (
+              ) : results?.result ? (
+                <div className="space-y-2">
+                  {/* Show compilation error if present */}
+                  {results.error && (
+                    <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-3 rounded mb-3">
+                      <p className="font-medium">Compilation Error:</p>
+                      <p className="text-sm mt-1">{results.error}</p>
+                      {results.line && results.column && (
+                        <p className="text-xs mt-1">Line: {results.line}, Column: {results.column}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="text-[#1D1E2C] dark:text-white font-medium text-sm mb-2">
+                    Test Results: {results.status === "Success" ? "All Passed ✓" : results.error ? "Compilation Failed" : "Some Failed ✗"}
+                  </div>
+                  {results.result.map((testResult, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-2 rounded text-sm ${
+                        testResult.status === "Success" 
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" 
+                          : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Test Case {index + 1}: {testResult.status}</span>
+                        {testResult.status === "Success" ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs">
+                        <span>Output: {testResult.output.join(", ")}</span>
+                        {testResult.status === "Failed" && testResult.expectedOutput.length > 0 && (
+                          <span className="ml-2">Expected: {testResult.expectedOutput.join(", ")}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : results?.error ? (
                 <div className="text-red-500 text-sm">
-                  {results.find(r => r.error)?.error && (
-                    <>
-                      <p>Error: {results.find(r => r.error)?.error?.message}</p>
-                      <p>Line: {results.find(r => r.error)?.error?.line}, Column: {results.find(r => r.error)?.error?.column}</p>
-                    </>
+                  <p>Error: {results.error}</p>
+                  {results.line && results.column && (
+                    <p>Line: {results.line}, Column: {results.column}</p>
                   )}
                 </div>
               ) : (

@@ -1,53 +1,56 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { Logo } from "@/components/logo"
-import { Eye, EyeOff } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Logo } from "@/components/logo";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth-provider";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const router = useRouter()
-  const { login } = useAuth()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
     try {
-      await login(email.trim(), password)
-      router.push("/app")
+      await login(email.trim(), password);
+      router.push("/app");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      setError(err instanceof Error ? err.message : "Login failed");
     }
 
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#F7EBEC] via-white to-[#DDBDD5] dark:from-[#1D1E2C] dark:via-[#2A2B3D] dark:to-[#59656F] flex items-center justify-center p-4 overflow-hidden overscroll-none">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Logo size="lg" className="justify-center mb-4" />
-          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">Welcome back!</h1>
-          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">Enter your credentials to access your account</p>
+          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">
+            Welcome back!
+          </h1>
+          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">
+            Enter your credentials to access your account
+          </p>
         </div>
 
         <Card className="bg-white/80 dark:bg-[#2A2B3D]/80 backdrop-blur-sm border-[#DDBDD5]/30">
-      
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               {error && (
@@ -56,8 +59,11 @@ export default function LoginPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-[#1D1E2C] dark:text-white">
-                  Email
+                <Label
+                  htmlFor="email"
+                  className="text-[#1D1E2C] dark:text-white"
+                >
+                  Username
                 </Label>
                 <Input
                   id="email"
@@ -71,7 +77,10 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-[#1D1E2C] dark:text-white">
+                <Label
+                  htmlFor="password"
+                  className="text-[#1D1E2C] dark:text-white"
+                >
                   Password
                 </Label>
                 <div className="relative">
@@ -100,7 +109,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-[#AC9FBB] to-[#59656F] hover:from-[#DDBDD5] hover:to-[#AC9FBB] text-white"
@@ -113,7 +121,10 @@ export default function LoginPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-[#59656F] dark:text-[#DDBDD5]">
                 {"Don't have an account? "}
-                <Link href="/auth/signup" className="text-[#AC9FBB] hover:text-[#59656F] hover:underline font-medium">
+                <Link
+                  href="/auth/signup"
+                  className="text-[#AC9FBB] hover:text-[#59656F] hover:underline font-medium"
+                >
                   Sign up
                 </Link>
               </p>
@@ -122,5 +133,5 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

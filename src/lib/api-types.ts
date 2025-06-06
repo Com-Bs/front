@@ -1,10 +1,13 @@
 export interface CodeRunResult {
-  results: Array<{
-    status?: "Error" | "Success"
-    error?: { message: string; line: number; column: number }
-    output: [number] | null
-    expected_output: [number]
+  result?: Array<{
+    status: "Success" | "Failed"
+    output: number[]
+    expectedOutput: number[]
   }>
+  error?: string
+  status?: "Success" | "Error"
+  line?: number
+  column?: number
 }
 
 export interface Problem {
@@ -16,6 +19,9 @@ export interface Problem {
   test_cases: Array<{ input: string; output: string }>
   created_at: string
   updated_at: string
+  // Function signature for code compilation (C minus - always returns int)
+  function_name?: string
+  arguments?: Array<{ name: string; type: string }>
 }
 
 export interface ProblemResponse {

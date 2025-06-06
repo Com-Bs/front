@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { Logo } from "@/components/logo"
-import { Eye, EyeOff } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { apiClient } from "@/lib/api"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Logo } from "@/components/logo";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/api";
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -19,58 +19,65 @@ export default function SignupPage() {
     email: "",
     password: "",
     confirmPassword: "",
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const router = useRouter()
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-    setSuccess("")
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match!")
-      setIsLoading(false)
-      return
+      setError("Passwords don't match!");
+      setIsLoading(false);
+      return;
     }
 
     try {
-      const response = await apiClient.signup(formData.name.trim(), formData.email.trim(), formData.password)
-      
+      const response = await apiClient.signup(
+        formData.name.trim(),
+        formData.email.trim(),
+        formData.password
+      );
+
       if (response.success) {
-        setSuccess("Account created successfully! Redirecting to login...")
+        setSuccess("Account created successfully! Redirecting to login...");
         setTimeout(() => {
-          router.push("/auth/login")
-        }, 2000)
+          router.push("/app");
+        }, 2000);
       } else {
-        setError("Signup failed. Please try again.")
+        setError("Signup failed. Please try again.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed")
+      setError(err instanceof Error ? err.message : "Signup failed");
     }
 
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#F7EBEC] via-white to-[#DDBDD5] dark:from-[#1D1E2C] dark:via-[#2A2B3D] dark:to-[#59656F] flex items-center justify-center p-4 overflow-hidden overscroll-none">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Logo size="lg" className="justify-center mb-4" />
-          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">Join Compilo!</h1>
-          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">Fill in your details to get started to start your coding adventure</p>
+          <h1 className="text-2xl font-bold text-[#1D1E2C] dark:text-white">
+            Join Compilo!
+          </h1>
+          <p className="text-[#59656F] dark:text-[#DDBDD5] mt-2">
+            Fill in your details to get started to start your coding adventure
+          </p>
         </div>
 
         <Card className="bg-white/80 dark:bg-[#2A2B3D]/80 backdrop-blur-sm border-[#DDBDD5]/30">
-        
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">
               {error && (
@@ -84,7 +91,10 @@ export default function SignupPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-[#1D1E2C] dark:text-white">
+                <Label
+                  htmlFor="name"
+                  className="text-[#1D1E2C] dark:text-white"
+                >
                   Username
                 </Label>
                 <Input
@@ -99,7 +109,10 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-[#1D1E2C] dark:text-white">
+                <Label
+                  htmlFor="email"
+                  className="text-[#1D1E2C] dark:text-white"
+                >
                   Email
                 </Label>
                 <Input
@@ -114,7 +127,10 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-[#1D1E2C] dark:text-white">
+                <Label
+                  htmlFor="password"
+                  className="text-[#1D1E2C] dark:text-white"
+                >
                   Password
                 </Label>
                 <div className="relative">
@@ -123,7 +139,9 @@ export default function SignupPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a strong password"
                     value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
                     className="border-[#DDBDD5]/50 focus:border-[#AC9FBB] pr-10"
                     required
                   />
@@ -144,7 +162,10 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-[#1D1E2C] dark:text-white">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-[#1D1E2C] dark:text-white"
+                >
                   Confirm Password
                 </Label>
                 <Input
@@ -152,7 +173,9 @@ export default function SignupPage() {
                   type="password"
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("confirmPassword", e.target.value)
+                  }
                   className="border-[#DDBDD5]/50 focus:border-[#AC9FBB]"
                   required
                 />
@@ -170,7 +193,10 @@ export default function SignupPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-[#59656F] dark:text-[#DDBDD5]">
                 Already have an account?{" "}
-                <Link href="/auth/login" className="text-[#AC9FBB] hover:text-[#59656F] hover:underline font-medium">
+                <Link
+                  href="/auth/login"
+                  className="text-[#AC9FBB] hover:text-[#59656F] hover:underline font-medium"
+                >
                   Sign in
                 </Link>
               </p>
@@ -179,5 +205,5 @@ export default function SignupPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
