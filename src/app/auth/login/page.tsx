@@ -63,12 +63,12 @@ export default function LoginPage() {
                   htmlFor="email"
                   className="text-[#1D1E2C] dark:text-white"
                 >
-                  Email
+                  Username
                 </Label>
                 <Input
                   id="email"
                   type="text"
-                  placeholder="example@email.com"
+                  placeholder="username123"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="border-[#DDBDD5]/50 focus:border-[#AC9FBB]"
